@@ -15,8 +15,10 @@ model User {
     email      String   @unique
     password   String?
     image      String?
-    cart       Json     @default("{}")
-    savedItems String[] @default([])
+    cart         Json      @default("{}")
+    savedItems   String[]  @default([])
+    otp          String?
+    otpExpiresAt DateTime?
 
     // Relations
     ratings     Rating[]

@@ -11,7 +11,8 @@ export const authOptions = {
             name: "Credentials",
             credentials: {
                 email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" }
+                password: { label: "Password", type: "password" },
+                otp: { label: "OTP", type: "text" }
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) {
@@ -48,6 +49,35 @@ export const authOptions = {
                 if (!isPasswordValid) {
                     throw new Error('Invalid password');
                 }
+
+                // --------- OTP VERIFICATION ---------
+                if (!credentials.otp) {
+                    throw new Error('OTP is required');
+                }
+
+                // 1. Check if OTP matches
+                if (user.otp !== credentials.otp) {
+                    // Clear OTP on failure for security (optional, but requested behavior is generally to clear on expiry)
+                    throw new Error('Invalid OTP');
+                }
+
+                // 2. Check if OTP is expired
+                const isExpired = !user.otpExpiresAt || new Date() > user.otpExpiresAt;
+                if (isExpired) {
+                    // Clear the expired OTP
+                    await prisma.user.update({
+                        where: { id: user.id },
+                        data: { otp: null, otpExpiresAt: null }
+                    });
+                    throw new Error('OTP has expired. Please request a new one.');
+                }
+
+                // 3. OTP is valid! Clear it so it can't be reused.
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: { otp: null, otpExpiresAt: null }
+                });
+                // ------------------------------------
 
                 return {
                     id: user.id,
