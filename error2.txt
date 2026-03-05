@@ -1,0 +1,14 @@
+PrismaClientKnownRequestError: 
+Invalid `prisma.user.update()` invocation in
+D:\ECOMMERWEBSITE_Cream\test_prisma.js:26:31
+
+  23 }
+  24 
+  25 try {
+→ 26     await prisma.user.update(
+Prisma needs to perform transactions, which requires your MongoDB server to be run as a replica set. https://pris.ly/d/mongodb-replica-set
+    at In.handleRequestError (D:\ECOMMERWEBSITE_Cream\node_modules\@prisma\client\runtime\library.js:123:6854)
+    at In.handleAndLogRequestError (D:\ECOMMERWEBSITE_Cream\node_modules\@prisma\client\runtime\library.js:123:6188)
+    at In.request (D:\ECOMMERWEBSITE_Cream\node_modules\@prisma\client\runtime\library.js:123:5896)
+    at async l (D:\ECOMMERWEBSITE_Cream\node_modules\@prisma\client\runtime\library.js:128:10871)
+    at async test (D:\ECOMMERWEBSITE_Cream\test_prisma.js:26:13)

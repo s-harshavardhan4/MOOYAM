@@ -1,0 +1,153 @@
+generator client {
+    provider        = "prisma-client-js"
+    previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+    provider  = "mongodb"
+    url       = env("DATABASE_URL")
+}
+
+// Required for creating a User: id, name, email, image, cart (optional JSON string)
+model User {
+    id         String   @id @default(auto()) @map("_id") @db.ObjectId
+    name       String
+    email      String   @unique
+    password   String?
+    image      String?
+    cart       Json     @default("{}")
+    savedItems String[] @default([])
+
+    // Relations
+    ratings     Rating[]
+    Address     Address[]
+    buyerOrders Order[]   @relation("BuyerRelation")
+}
+
+// Required for creating a Product: name, description, mrp, price, images, category
+model Product {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    name        String
+    description String
+    mrp         Float
+    price       Float
+    images      String[]
+    category    Category
+    subCategory String?
+    inStock     Boolean  @default(true)
+    quantity    Int      @default(10)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    // Relations
+    orderItems OrderItem[]
+    rating     Rating[]
+}
+
+enum Category {
+    SkinCare
+    HairCare
+    Makeup
+}
+
+enum SubCategory {
+    Creams
+    Serums
+}
+
+enum OrderStatus {
+    ORDER_PLACED
+    PROCESSING
+    SHIPPED
+    DELIVERED
+}
+
+enum PaymentMethod {
+    COD
+    STRIPE
+}
+
+// Required for creating an Order: total, userId, addressId, isPaid, paymentMethod, isCouponUsed, coupon (JSON), orderItems (nested)
+model Order {
+    id            String        @id @default(auto()) @map("_id") @db.ObjectId
+    total         Float
+    status        OrderStatus   @default(ORDER_PLACED)
+    userId        String
+    addressId     String
+    isPaid        Boolean       @default(false)
+    paymentMethod PaymentMethod
+    createdAt     DateTime      @default(now())
+    updatedAt     DateTime      @updatedAt
+    isCouponUsed  Boolean       @default(false)
+    coupon        Json          @default("{}")
+    orderItems    OrderItem[]
+
+    // Relations
+    user    User    @relation("BuyerRelation", fields: [userId], references: [id])
+    address Address @relation(fields: [addressId], references: [id])
+}
+
+// Required for creating an OrderItem: orderId, productId, quantity, price
+model OrderItem {
+    id        String @id @default(auto()) @map("_id") @db.ObjectId
+    orderId   String
+    productId String
+    quantity  Int
+    price     Float
+
+    // Relations
+    order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    product Product @relation(fields: [productId], references: [id])
+
+    @@unique([orderId, productId])
+}
+
+// Required for creating a Rating: rating, review, userId, productId
+model Rating {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    rating    Int
+    review    String
+    userId    String
+    productId String
+    orderId   String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+    product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, productId])
+}
+
+// Required for creating an Address: userId, name, email, street, city, state, zip, country, phone
+model Address {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId    String
+    name      String
+    email     String
+    street    String
+    city      String
+    state     String
+    zip       String
+    country   String
+    phone     String
+    createdAt DateTime @default(now())
+
+    // Relations
+    Order Order[]
+    user  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Required for creating a Coupon: code, description, discount, forNewUser, isPublic, expiresAt
+model Coupon {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    code        String   @unique
+    description String
+    discount    Float
+    forNewUser  Boolean
+    forMember   Boolean  @default(false)
+    isPublic    Boolean
+    expiresAt   DateTime
+    createdAt   DateTime @default(now())
+}
