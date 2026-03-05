@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -13,6 +13,7 @@ export default function LoginPage() {
     const [step, setStep] = useState('credentials'); // 'credentials' or 'otp'
     const [countdown, setCountdown] = useState(300); // 5 minutes in seconds
     const [canResend, setCanResend] = useState(false);
+    const [formData, setFormData] = useState({ email: '', password: '', otp: '' });
 
     // Timer effect for OTP
     useEffect(() => {

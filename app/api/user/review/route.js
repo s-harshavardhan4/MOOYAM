@@ -1,11 +1,10 @@
-import { PrismaClient } from '@prisma/client'
-import { auth } from '@/lib/auth'
-
-const prisma = new PrismaClient()
+import { getServerSession } from "next-auth"
+import { authOptions } from "../../auth/[...nextauth]/route"
+import { prisma } from "@/lib/db"
 
 export async function POST(req) {
     try {
-        const session = await auth()
+        const session = await getServerSession(authOptions)
         if (!session || !session.user) {
             return new Response(JSON.stringify({ message: "Unauthorized" }), { status: 401 })
         }
@@ -55,7 +54,5 @@ export async function POST(req) {
     } catch (error) {
         console.error("API Error in Add Review:", error)
         return new Response(JSON.stringify({ message: "Internal server error" }), { status: 500 })
-    } finally {
-        await prisma.$disconnect()
     }
 }
