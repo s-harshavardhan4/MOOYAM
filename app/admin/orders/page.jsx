@@ -23,7 +23,7 @@ export default function AdminOrders() {
                         const productInfo = globalProducts.find(p => p.id === item.productId) || productDummyData.find(p => p.id === item.productId)
                         return {
                             ...item,
-                            product: productInfo || { name: 'Unknown Product', images: [''] }
+                            product: productInfo || { name: 'Unknown Product', images: [] }
                         }
                     })
                     return { ...order, orderItems: mappedItems }
@@ -102,7 +102,7 @@ export default function AdminOrders() {
                                             {order.orderItems.map((item, idx) => (
                                                 <div key={idx} className="flex items-center gap-2">
                                                     <img
-                                                        src={item.product.images?.[0].src || item.product.images?.[0] || '/placeholder.jpg'}
+                                                        src={item.product.images?.[0]?.src || item.product.images?.[0] || '/products/MOOYAM.jpeg'}
                                                         className="w-8 h-8 rounded object-cover"
                                                         alt={item.product?.name || "Product"}
                                                     />
@@ -170,7 +170,7 @@ export default function AdminOrders() {
                                 {selectedOrder.orderItems.map((item, i) => (
                                     <div key={i} className="flex items-center gap-4 border border-slate-100 shadow rounded p-2">
                                         <img
-                                            src={item.product.images?.[0].src || item.product.images?.[0]}
+                                            src={item.product.images?.[0]?.src || item.product.images?.[0] || '/products/MOOYAM.jpeg'}
                                             alt={item.product?.name}
                                             className="w-16 h-16 object-cover rounded"
                                         />

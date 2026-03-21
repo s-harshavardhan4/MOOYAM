@@ -3,11 +3,22 @@ import { assets } from "@/assets/assets"
 import Image from "next/image"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
-
+import { useSelector } from "react-redux"
+import { PlusIcon, XIcon } from "lucide-react"
 export default function AdminAddProduct() {
 
-    const categories = ['SkinCare', 'HairCare', 'Makeup']
-    const subCategories = ['Creams', 'Serums']
+    const products = useSelector(state => state.product.list) || []
+
+    const defaultCategories = ['SkinCare', 'HairCare', 'Makeup']
+    const dbCategories = products.map(p => p.category).filter(Boolean)
+    const categories = Array.from(new Set([...defaultCategories, ...dbCategories]))
+
+    const defaultSubCategories = ['Creams', 'Serums']
+    const dbSubCategories = products.map(p => p.subCategory).filter(Boolean)
+    const subCategories = Array.from(new Set([...defaultSubCategories, ...dbSubCategories]))
+
+    const [isNewCategory, setIsNewCategory] = useState(false)
+    const [isNewSubCategory, setIsNewSubCategory] = useState(false)
 
     const [images, setImages] = useState({ 1: null, 2: null, 3: null, 4: null })
     const [productInfo, setProductInfo] = useState({
@@ -108,20 +119,60 @@ export default function AdminAddProduct() {
                 </label>
             </div>
 
-            <div className="flex gap-5">
-                <select onChange={onChangeHandler} name="category" value={productInfo.category} className="w-full max-w-sm p-2 px-4 my-6 outline-none border border-slate-200 rounded" required>
-                    <option value="">Select a category</option>
-                    {categories.map((category) => (
-                        <option key={category} value={category}>{category}</option>
-                    ))}
-                </select>
+            <div className="flex gap-5 mb-6">
+                {/* Category Selection/Creation */}
+                <div className="w-full max-w-sm">
+                    <label className="text-sm mb-2 block">Category</label>
+                    <div className="flex items-center gap-2">
+                        {!isNewCategory ? (
+                            <>
+                                <select onChange={onChangeHandler} name="category" value={productInfo.category} className="w-full p-2 px-4 outline-none border border-slate-200 rounded" required>
+                                    <option value="">Select a category</option>
+                                    {categories.map((category) => (
+                                        <option key={category} value={category}>{category}</option>
+                                    ))}
+                                </select>
+                                <button type="button" onClick={() => { setIsNewCategory(true); setProductInfo({ ...productInfo, category: "" }) }} className="p-2 border border-slate-200 rounded hover:bg-slate-50 transition-all text-slate-500" title="Add New Category">
+                                    <PlusIcon size={20} />
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <input type="text" name="category" onChange={onChangeHandler} value={productInfo.category} placeholder="Enter new category" className="w-full p-2 px-4 outline-none border border-slate-200 rounded" required />
+                                <button type="button" onClick={() => { setIsNewCategory(false); setProductInfo({ ...productInfo, category: "" }) }} className="p-2 border border-transparent rounded hover:bg-red-50 transition-all text-red-500" title="Cancel">
+                                    <XIcon size={20} />
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
 
-                <select onChange={onChangeHandler} name="subCategory" value={productInfo.subCategory} className="w-full max-w-sm p-2 px-4 my-6 outline-none border border-slate-200 rounded">
-                    <option value="">Select a sub-category (Optional)</option>
-                    {subCategories.map((subCategory) => (
-                        <option key={subCategory} value={subCategory}>{subCategory}</option>
-                    ))}
-                </select>
+                {/* SubCategory Selection/Creation */}
+                <div className="w-full max-w-sm">
+                    <label className="text-sm mb-2 block">SubCategory (Optional)</label>
+                    <div className="flex items-center gap-2">
+                        {!isNewSubCategory ? (
+                            <>
+                                <select onChange={onChangeHandler} name="subCategory" value={productInfo.subCategory} className="w-full p-2 px-4 outline-none border border-slate-200 rounded">
+                                    <option value="">Select a sub-category</option>
+                                    {subCategories.map((subCategory) => (
+                                        <option key={subCategory} value={subCategory}>{subCategory}</option>
+                                    ))}
+                                </select>
+                                <button type="button" onClick={() => { setIsNewSubCategory(true); setProductInfo({ ...productInfo, subCategory: "" }) }} className="p-2 border border-slate-200 rounded hover:bg-slate-50 transition-all text-slate-500" title="Add New SubCategory">
+                                    <PlusIcon size={20} />
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <input type="text" name="subCategory" onChange={onChangeHandler} value={productInfo.subCategory} placeholder="Enter new sub-category" className="w-full p-2 px-4 outline-none border border-slate-200 rounded" />
+                                <button type="button" onClick={() => { setIsNewSubCategory(false); setProductInfo({ ...productInfo, subCategory: "" }) }} className="p-2 border border-transparent rounded hover:bg-red-50 transition-all text-red-500" title="Cancel">
+                                    <XIcon size={20} />
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
             </div>
 
             <br />

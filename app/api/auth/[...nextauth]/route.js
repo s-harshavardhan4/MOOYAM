@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
 
 export const authOptions = {
-    adapter: PrismaAdapter(prisma),
+    // adapter: PrismaAdapter(prisma),
     providers: [
         CredentialsProvider({
             name: "Credentials",
@@ -19,10 +19,16 @@ export const authOptions = {
                     throw new Error("Invalid credentials");
                 }
 
+                console.log('DEBUG [authorize]: email received:', `"${credentials.email}"`);
+                console.log('DEBUG [authorize]: password received:', `"${credentials.password}"`);
+
+                const receivedEmail = (credentials.email || "").trim().toLowerCase();
+                const receivedPassword = (credentials.password || "").trim();
+
                 // --------- ADMIN OVERRIDE ---------
                 if (
-                    credentials.email === "admin@mooyan.com" &&
-                    credentials.password === "admin@123"
+                    receivedEmail === "admin@mooyan.com" &&
+                    receivedPassword === "admin@123"
                 ) {
                     return {
                         id: "admin-id",
@@ -49,35 +55,6 @@ export const authOptions = {
                 if (!isPasswordValid) {
                     throw new Error('Invalid password');
                 }
-
-                // --------- OTP VERIFICATION ---------
-                if (!credentials.otp) {
-                    throw new Error('OTP is required');
-                }
-
-                // 1. Check if OTP matches
-                if (user.otp !== credentials.otp) {
-                    // Clear OTP on failure for security (optional, but requested behavior is generally to clear on expiry)
-                    throw new Error('Invalid OTP');
-                }
-
-                // 2. Check if OTP is expired
-                const isExpired = !user.otpExpiresAt || new Date() > user.otpExpiresAt;
-                if (isExpired) {
-                    // Clear the expired OTP
-                    await prisma.user.update({
-                        where: { id: user.id },
-                        data: { otp: null, otpExpiresAt: null }
-                    });
-                    throw new Error('OTP has expired. Please request a new one.');
-                }
-
-                // 3. OTP is valid! Clear it so it can't be reused.
-                await prisma.user.update({
-                    where: { id: user.id },
-                    data: { otp: null, otpExpiresAt: null }
-                });
-                // ------------------------------------
 
                 return {
                     id: user.id,

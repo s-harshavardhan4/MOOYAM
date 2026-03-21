@@ -4,6 +4,11 @@ import { NextResponse } from "next/server";
 export async function middleware(req) {
     const token = await getToken({ req });
     const { pathname } = req.nextUrl;
+    
+    // Explicitly bypass all API routes
+    if (pathname.startsWith("/api")) {
+        return NextResponse.next();
+    }
 
     const isAuthRoute = pathname === "/login" || pathname === "/signup";
     const isAdminRoute = pathname.startsWith("/admin");

@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { MongoClient, ObjectId } from 'mongodb';
+import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
 
-const uri = process.env.DATABASE_URL;
-const client = new MongoClient(uri);
-
 export async function POST(request) {
+    const uri = process.env.DATABASE_URL;
+    const client = new MongoClient(uri);
+
     try {
         const body = await request.json();
         const { name, email, password } = body;
@@ -15,11 +15,11 @@ export async function POST(request) {
         }
 
         await client.connect();
-        const database = client.db("cosmeticsdb");
-        const users = database.collection("User");
+        const db = client.db(); // Uses DB from connection string
+        const collection = db.collection('User');
 
         // Check if user already exists
-        const existingUser = await users.findOne({ email: email });
+        const existingUser = await collection.findOne({ email });
 
         if (existingUser) {
             return NextResponse.json({ success: false, message: 'User already exists with this email' }, { status: 409 });
@@ -29,21 +29,26 @@ export async function POST(request) {
         const hashedPassword = await bcrypt.hash(password, 12);
 
         // Create user
-        const result = await users.insertOne({
+        const newUser = {
             name,
             email,
             password: hashedPassword,
             image: '',
-            cart: '{}'
-        });
+            cart: {},
+            savedItems: [],
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        const result = await collection.insertOne(newUser);
 
         return NextResponse.json({
             success: true,
             message: 'User created successfully',
             user: {
-                id: result.insertedId.toString(),
-                name: name,
-                email: email
+                id: result.insertedId,
+                name: newUser.name,
+                email: newUser.email
             }
         }, { status: 201 });
 
@@ -54,3 +59,4 @@ export async function POST(request) {
         await client.close();
     }
 }
+

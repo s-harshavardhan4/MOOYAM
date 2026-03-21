@@ -103,7 +103,7 @@ export default function AdminManageProducts() {
                             <tr key={product.id} className="border-t border-gray-200 hover:bg-gray-50">
                                 <td className="px-4 py-3">
                                     <div className="flex gap-3 items-center">
-                                        <Image width={40} height={40} className='p-1 shadow rounded' src={product.images[0] || '/placeholder.jpg'} alt="" />
+                                        <Image width={40} height={40} className='p-1 shadow rounded' src={product.images[0] || '/products/MOOYAM.jpeg'} alt="" />
                                         <span className="truncate max-w-[200px] block" title={product.name}>{product.name}</span>
                                     </div>
                                 </td>
