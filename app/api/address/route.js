@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
-import { MongoClient, ObjectId } from 'mongodb';
+import { ObjectId } from 'mongodb';
 
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
-
-const uri = process.env.DATABASE_URL;
-const client = new MongoClient(uri);
+import { getDb } from "@/lib/mongodb";
 
 export async function GET() {
+    let client;
     try {
         const session = await getServerSession(authOptions);
         if (!session || !session.user || !session.user.id) {
@@ -16,8 +15,7 @@ export async function GET() {
 
         const userId = session.user.id;
 
-        await client.connect();
-        const database = client.db("cosmeticsdb");
+        const { db: database } = await getDb("cosmeticsdb");
         const addressesCollection = database.collection("Address");
 
         const addresses = await addressesCollection
@@ -25,7 +23,6 @@ export async function GET() {
             .sort({ createdAt: -1 })
             .toArray();
 
-        // Convert _id to string for the frontend
         const formattedAddresses = addresses.map(addr => ({
             ...addr,
             id: addr._id.toString()
@@ -34,10 +31,7 @@ export async function GET() {
         return NextResponse.json({ success: true, addresses: formattedAddresses });
     } catch (error) {
         console.error('Error fetching addresses:', error);
-        return NextResponse.json({ success: false, message: 'Failed to fetch addresses', error: error.message }, { status: 500 });
-    } finally {
-        // Not closing the client to reuse connections in serverless functions is common, but closing it here to be safe and match the previous script
-        await client.close();
+        return NextResponse.json({ success: false, message: 'Failed to fetch addresses' }, { status: 500 });
     }
 }
 
@@ -70,8 +64,7 @@ export async function POST(request) {
             createdAt: new Date()
         };
 
-        await client.connect();
-        const database = client.db("cosmeticsdb");
+        const { db: database } = await getDb("cosmeticsdb");
         const addressesCollection = database.collection("Address");
 
         const result = await addressesCollection.insertOne(addressData);
@@ -84,8 +77,6 @@ export async function POST(request) {
         return NextResponse.json({ success: true, address: newAddress }, { status: 201 });
     } catch (error) {
         console.error('Error creating address:', error);
-        return NextResponse.json({ success: false, message: 'Failed to create address', error: error.message }, { status: 500 });
-    } finally {
-        await client.close();
+        return NextResponse.json({ success: false, message: 'Failed to create address' }, { status: 500 });
     }
 }

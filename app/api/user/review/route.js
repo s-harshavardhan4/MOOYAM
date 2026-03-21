@@ -2,6 +2,17 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "../../auth/[...nextauth]/route"
 import { prisma } from "@/lib/db"
 
+function sanitizeReview(input) {
+    if (typeof input !== 'string') return '';
+    return input
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/\//g, '&#x2F;')
+        .trim();
+}
+
 export async function POST(req) {
     try {
         const session = await getServerSession(authOptions)
@@ -18,7 +29,6 @@ export async function POST(req) {
 
         const userId = session.user.id
 
-        // Check if user already reviewed this product
         const existingReview = await prisma.rating.findUnique({
             where: {
                 userId_productId: {
@@ -32,11 +42,12 @@ export async function POST(req) {
             return new Response(JSON.stringify({ message: "You have already reviewed this product." }), { status: 409 })
         }
 
-        // Create new review
+        const sanitizedReview = sanitizeReview(review);
+
         const newReview = await prisma.rating.create({
             data: {
                 rating: Number(rating),
-                review: String(review),
+                review: sanitizedReview,
                 userId,
                 productId
             },

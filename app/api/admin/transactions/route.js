@@ -1,20 +1,17 @@
 import { NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
-
-const uri = process.env.DATABASE_URL;
-const client = new MongoClient(uri);
+import { getDb } from "@/lib/mongodb";
 
 export async function GET() {
+    let client;
     try {
         const session = await getServerSession(authOptions);
         if (!session || !session.user || !session.user.isAdmin) {
             return NextResponse.json({ success: false, message: 'Unauthorized Admin Access' }, { status: 401 });
         }
 
-        await client.connect();
-        const database = client.db("cosmeticsdb");
+        const { db: database } = await getDb("cosmeticsdb");
 
         // Fetch only orders where payment method is not COD (i.e., STRIPE)
         const transactions = await database.collection("Order").aggregate([
@@ -64,7 +61,5 @@ export async function GET() {
     } catch (error) {
         console.error('Error fetching admin transactions:', error);
         return NextResponse.json({ success: false, message: 'Failed to fetch admin transactions' }, { status: 500 });
-    } finally {
-        await client.close();
     }
 }

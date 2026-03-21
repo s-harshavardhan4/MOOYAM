@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
+import { getDb } from '@/lib/mongodb';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request) {
-    const uri = process.env.DATABASE_URL;
-    const client = new MongoClient(uri);
 
     try {
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
+        const { success } = await checkRateLimit(`register_${ip}`, 5, 3600000); // 5 registrations per hour
+
+        if (!success) {
+            return NextResponse.json({ success: false, message: 'Too many registration attempts. Please try again later.' }, { status: 429 });
+        }
+
         const body = await request.json();
         const { name, email, password } = body;
 
@@ -14,8 +20,20 @@ export async function POST(request) {
             return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 });
         }
 
-        await client.connect();
-        const db = client.db(); // Uses DB from connection string
+        if (password.length < 8) {
+            return NextResponse.json({ success: false, message: 'Password must be at least 8 characters' }, { status: 400 });
+        }
+        if (!/[A-Z]/.test(password)) {
+            return NextResponse.json({ success: false, message: 'Password must contain at least one uppercase letter' }, { status: 400 });
+        }
+        if (!/[a-z]/.test(password)) {
+            return NextResponse.json({ success: false, message: 'Password must contain at least one lowercase letter' }, { status: 400 });
+        }
+        if (!/[0-9]/.test(password)) {
+            return NextResponse.json({ success: false, message: 'Password must contain at least one number' }, { status: 400 });
+        }
+
+        const { db } = await getDb();
         const collection = db.collection('User');
 
         // Check if user already exists
@@ -54,9 +72,7 @@ export async function POST(request) {
 
     } catch (error) {
         console.error('Registration error:', error);
-        return NextResponse.json({ success: false, message: 'An error occurred during registration', error: error.message }, { status: 500 });
-    } finally {
-        await client.close();
+        return NextResponse.json({ success: false, message: 'An error occurred during registration' }, { status: 500 });
     }
 }
 

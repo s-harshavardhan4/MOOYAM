@@ -48,15 +48,15 @@ function ShopContent() {
                         <button
                             key={cat}
                             onClick={() => setCategoryFilter(cat)}
-                            className={`px-5 py-1.5 rounded-full border transition-all text-sm font-medium ${categoryFilter === cat ? 'bg-slate-700 text-white border-slate-700 shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-700 hover:text-slate-700'}`}
+                            className={`px-5 py-1.5 rounded-full border transition-all text-sm font-medium ${categoryFilter === cat ? 'bg-[#D4A398] text-white border-[#D4A398] shadow-md' : 'bg-white text-slate-500 border-slate-200 hover:border-[#D4A398] hover:text-[#D4A398]'}`}
                         >
                             {cat}
                         </button>
                     ))}
                 </div>
 
-                {/* Subcategory Tabs (Only show if there are actual subcategories to filter) */}
-                {dynamicSubCategories.length > 1 && (
+                {/* Subcategory Tabs (Only show if there are actual subcategories to filter and a category is selected) */}
+                {categoryFilter !== 'All' && dynamicSubCategories.length > 1 && (
                     <div className="flex flex-wrap gap-3 mb-8">
                         {dynamicSubCategories.map(sub => (
                             <button

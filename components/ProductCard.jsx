@@ -75,6 +75,7 @@ const ProductCard = ({ product, className = "" }) => {
                 {/* Floating Wishlist Button */}
                 <button
                     onClick={handleWishlistToggle}
+                    aria-label={isSaved ? "Remove from Wishlist" : "Add to Wishlist"}
                     className='absolute top-3 right-3 z-30 p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm hover:bg-white text-gray-400 hover:text-[#D4A398] transition-all hover:scale-110 active:scale-95'
                 >
                     <HeartIcon size={18} fill={isSaved ? "#D4A398" : "none"} color={isSaved ? "#D4A398" : "currentColor"} />

@@ -28,6 +28,19 @@ const OrderSummary = ({ totalPrice, items }) => {
 
     const handleCouponCode = async (event) => {
         event.preventDefault();
+        if (!couponCodeInput.trim()) {
+            throw new Error('Please enter a coupon code');
+        }
+        
+        const res = await fetch(`/api/coupon?code=${couponCodeInput}`);
+        const data = await res.json();
+        
+        if (!data.success) {
+            throw new Error(data.message || 'Invalid coupon code');
+        }
+        
+        setCoupon(data.coupon);
+        setCouponCodeInput('');
     }
 
     const handlePlaceOrder = async (e) => {

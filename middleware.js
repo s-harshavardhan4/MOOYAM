@@ -38,7 +38,9 @@ export async function middleware(req) {
     // If user is NOT logged in
     else {
         if (isAdminRoute || isProtectedRoute) {
-            return NextResponse.redirect(new URL("/login", req.url));
+            const loginUrl = new URL("/login", req.url);
+            loginUrl.searchParams.set("callbackUrl", pathname);
+            return NextResponse.redirect(loginUrl);
         }
     }
 

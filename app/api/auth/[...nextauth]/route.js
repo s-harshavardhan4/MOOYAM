@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/db"
 import bcrypt from "bcryptjs"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 export const authOptions = {
     // adapter: PrismaAdapter(prisma),
@@ -14,30 +15,38 @@ export const authOptions = {
                 password: { label: "Password", type: "password" },
                 otp: { label: "OTP", type: "text" }
             },
-            async authorize(credentials) {
+            async authorize(credentials, req) {
+                const ip = req.headers?.['x-forwarded-for']?.split(',')[0] || '127.0.0.1';
+                const { success } = await checkRateLimit(`login_${ip}`, 10, 600000); // 10 login attempts per 10 minutes
+
+                if (!success) {
+                    throw new Error("Too many login attempts. Please try again later.");
+                }
+
                 if (!credentials?.email || !credentials?.password) {
                     throw new Error("Invalid credentials");
                 }
 
-                console.log('DEBUG [authorize]: email received:', `"${credentials.email}"`);
-                console.log('DEBUG [authorize]: password received:', `"${credentials.password}"`);
-
                 const receivedEmail = (credentials.email || "").trim().toLowerCase();
                 const receivedPassword = (credentials.password || "").trim();
 
-                // --------- ADMIN OVERRIDE ---------
                 if (
-                    receivedEmail === "admin@mooyan.com" &&
-                    receivedPassword === "admin@123"
+                    receivedEmail === process.env.ADMIN_EMAIL &&
+                    process.env.ADMIN_PASSWORD_HASH
                 ) {
-                    return {
-                        id: "admin-id",
-                        email: "admin@mooyan.com",
-                        name: "Admin",
-                        isAdmin: true,
-                    };
+                    const isPasswordValid = await bcrypt.compare(
+                        receivedPassword,
+                        process.env.ADMIN_PASSWORD_HASH
+                    );
+                    if (isPasswordValid) {
+                        return {
+                            id: "admin-id",
+                            email: process.env.ADMIN_EMAIL,
+                            name: "Admin",
+                            isAdmin: true,
+                        };
+                    }
                 }
-                // -----------------------------------
 
                 const user = await prisma.user.findUnique({
                     where: { email: credentials.email }

@@ -1,14 +1,16 @@
 'use client'
 import { useRef, useEffect } from 'react'
 import { Provider } from 'react-redux'
+import { useSession } from 'next-auth/react'
 import { makeStore } from '../lib/store'
 import { setProduct } from '@/lib/features/product/productSlice'
 import { fetchWishlistAsync } from '@/lib/features/wishlist/wishlistSlice'
 
 export default function StoreProvider({ children }) {
   const storeRef = useRef(undefined)
+  const { data: session } = useSession()
+  
   if (!storeRef.current) {
-    // Create the store instance the first time this renders
     storeRef.current = makeStore()
   }
 
@@ -21,9 +23,13 @@ export default function StoreProvider({ children }) {
         }
       })
       .catch(console.error)
-
-    storeRef.current.dispatch(fetchWishlistAsync())
   }, [])
+
+  useEffect(() => {
+    if (session?.user) {
+      storeRef.current.dispatch(fetchWishlistAsync())
+    }
+  }, [session])
 
   return <Provider store={storeRef.current}>{children}</Provider>
 }

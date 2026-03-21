@@ -3,10 +3,11 @@ import { MongoClient } from 'mongodb';
 import { productDummyData } from '@/assets/assets';
 
 const uri = process.env.DATABASE_URL;
-const client = new MongoClient(uri);
 
 export async function GET() {
+    let client;
     try {
+        client = new MongoClient(uri);
         await client.connect();
         const database = client.db("cosmeticsdb");
         const productsCollection = database.collection("Product");
@@ -33,8 +34,8 @@ export async function GET() {
         return NextResponse.json({ success: true, message: 'Products seeded successfully', count: result.insertedCount });
     } catch (error) {
         console.error('Seed error:', error);
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        return NextResponse.json({ success: false, message: 'Failed to seed products' }, { status: 500 });
     } finally {
-        await client.close();
+        if (client) await client.close();
     }
 }

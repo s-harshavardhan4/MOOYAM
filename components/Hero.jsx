@@ -79,7 +79,7 @@ const Hero = () => {
 
                     <div className='p-8 md:pl-16 md:pr-4 relative z-10 w-full md:w-1/2 flex flex-col justify-center items-start'>
                         <motion.div variants={itemVariants} onClick={() => router.push('/shop')} className='inline-flex items-center gap-3 bg-white border border-[#D4A398]/30 text-[#D4A398] pr-4 p-1 rounded-full text-xs sm:text-sm shadow-sm backdrop-blur-sm cursor-pointer'>
-                            <span className='bg-[#D4A398] px-3 py-1 max-sm:ml-1 rounded-full text-white text-xs font-medium tracking-wide'>NEW</span> <span className="font-serif italic font-medium">Free Shipping on Orders Above $50!</span> <ChevronRightIcon className='group-hover:ml-2 transition-all text-[#D4A398]' size={16} />
+                            <span className='bg-[#D4A398] px-3 py-1 max-sm:ml-1 rounded-full text-white text-xs font-medium tracking-wide'>NEW</span> <span className="font-serif italic font-medium">Free Shipping on Orders Above {currency}500!</span> <ChevronRightIcon className='group-hover:ml-2 transition-all text-[#D4A398]' size={16} />
                         </motion.div>
 
                         <motion.h2 variants={itemVariants} className='text-4xl sm:text-6xl/tight my-6 font-bold font-serif text-[#2C2C2C]'>
@@ -109,7 +109,7 @@ const Hero = () => {
                         variants={imageVariants}
                         className='w-full md:w-1/2 h-full flex items-center justify-center relative p-4'
                     >
-                        <Image className='w-full max-h-[500px] object-contain drop-shadow-2xl' width={600} height={600} src={assets.hero_model_img} alt="Elegant Model" />
+                        <Image className='w-full max-h-[500px] object-contain drop-shadow-2xl' width={600} height={600} src={assets.hero_model_img} alt="Elegant Model" priority />
                     </motion.div>
                 </motion.div>
 

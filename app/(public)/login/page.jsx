@@ -2,13 +2,16 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 import toast from 'react-hot-toast';
 
 export default function LoginPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const callbackUrl = searchParams.get('callbackUrl') || '/';
+    
     const [isLoading, setIsLoading] = useState(false);
     const [formData, setFormData] = useState({ email: '', password: '' });
 
@@ -31,7 +34,7 @@ export default function LoginPage() {
                 toast.error(result.error);
             } else {
                 toast.success('Signed in successfully');
-                router.push('/');
+                router.push(callbackUrl);
                 router.refresh();
             }
         } catch (error) {
@@ -93,7 +96,7 @@ export default function LoginPage() {
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <label className="block text-sm font-medium text-rich-black" htmlFor="password">Password</label>
-                                <Link href="#" className="text-xs text-gold font-medium hover:text-gold-dark transition-colors">Forgot Password?</Link>
+                                <Link href="/forgot-password" className="text-xs text-gold font-medium hover:text-gold-dark transition-colors">Forgot Password?</Link>
                             </div>
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">

@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { MongoClient, ObjectId } from 'mongodb';
+import { ObjectId } from 'mongodb';
 
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
-
-const uri = process.env.DATABASE_URL;
-const client = new MongoClient(uri);
+import { getDb } from "@/lib/mongodb";
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function GET() {
+    let client;
     try {
         const session = await getServerSession(authOptions);
         if (!session || !session.user || !session.user.id) {
@@ -16,8 +16,7 @@ export async function GET() {
 
         const userId = session.user.id;
 
-        await client.connect();
-        const database = client.db("cosmeticsdb");
+        const { db: database } = await getDb("cosmeticsdb");
 
         // Use an aggregation pipeline to fetch orders for this specific userId
         const orders = await database.collection("Order").aggregate([
@@ -84,13 +83,18 @@ export async function GET() {
     } catch (error) {
         console.error('Error fetching user orders:', error);
         return NextResponse.json({ success: false, message: 'Failed to fetch orders' }, { status: 500 });
-    } finally {
-        await client.close();
     }
 }
 
 export async function POST(request) {
     try {
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
+        const { success } = await checkRateLimit(`order_${ip}`, 10, 3600000); // 10 orders per hour
+
+        if (!success) {
+            return NextResponse.json({ success: false, message: 'Too many order attempts. Please try again later.' }, { status: 429 });
+        }
+
         const body = await request.json();
         const { total, items, addressId, paymentMethod, coupon } = body;
 
@@ -105,36 +109,49 @@ export async function POST(request) {
             return NextResponse.json({ success: false, message: 'Missing required order fields' }, { status: 400 });
         }
 
-        // Manual construct Order and OrderItems without transactions
+        const { db: database } = await getDb("cosmeticsdb");
+
+        const productIds = items.map(item => item.id || item.productId);
+        const dbProducts = await database.collection("Product").find(
+            { _id: { $in: productIds.map(id => new ObjectId(id)) } }
+        ).toArray();
+
+        const dbProductMap = new Map(dbProducts.map(p => [p._id.toString(), p]));
+
+        const verifiedTotal = dbProducts.reduce((sum, dbProduct) => {
+            const cartItem = items.find(i => (i.id || i.productId) === dbProduct._id.toString());
+            return sum + (dbProduct.price * (cartItem?.quantity || 1));
+        }, 0);
+
+        const orderItemsList = items.map(item => {
+            const productId = item.id || item.productId;
+            const dbProduct = dbProductMap.get(productId);
+            return {
+                productId,
+                quantity: item.quantity || 1,
+                price: dbProduct ? dbProduct.price : 0,
+            };
+        });
+
         const orderData = {
             userId: userId,
-            total: parseFloat(total),
+            total: verifiedTotal,
             status: "ORDER_PLACED",
             paymentMethod,
             addressId,
-            isPaid: false, // Default to false
+            isPaid: false,
             isCouponUsed: !!coupon,
             coupon: coupon || "{}",
             createdAt: new Date(),
             updatedAt: new Date(),
         };
 
-        const orderItemsList = items.map(item => ({
-            productId: item.id || item.productId, // Handle different variations of item shape
-            quantity: item.quantity || 1,
-            price: parseFloat(item.price || item.mrp || 0),
-        }));
-
-        await client.connect();
-        const database = client.db("cosmeticsdb");
         const ordersCollection = database.collection("Order");
         const orderItemsCollection = database.collection("OrderItem");
 
-        // Create Order first
         const orderResult = await ordersCollection.insertOne(orderData);
         const orderIdString = orderResult.insertedId.toString();
 
-        // Attach orderId and _id ObjectIds for items
         const rawOrderItems = orderItemsList.map(item => ({
             ...item,
             orderId: orderIdString
@@ -144,8 +161,6 @@ export async function POST(request) {
             await orderItemsCollection.insertMany(rawOrderItems);
         }
 
-        // The MongoDB driver automatically mutates the object and adds an ObjectId `_id` property
-        // NextResponse.json will fail to serialize `ObjectId`, so we must delete them before responding.
         delete orderData._id;
         rawOrderItems.forEach(item => delete item._id);
 
@@ -158,8 +173,6 @@ export async function POST(request) {
         return NextResponse.json({ success: true, order: newOrder }, { status: 201 });
     } catch (error) {
         console.error('Error creating order:', error);
-        return NextResponse.json({ success: false, message: 'Failed to create order', error: error.message }, { status: 500 });
-    } finally {
-        await client.close();
+        return NextResponse.json({ success: false, message: 'Failed to create order' }, { status: 500 });
     }
 }
