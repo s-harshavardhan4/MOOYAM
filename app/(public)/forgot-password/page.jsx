@@ -21,20 +21,21 @@ export default function ForgotPasswordPage() {
         setIsLoading(true);
 
         try {
-            const res = await fetch('/api/auth/forgot-password', {
+            const res = await fetch('/api/auth/send-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: formData.email })
             });
-
+ 
             const data = await res.json();
-
+ 
             if (!res.ok) {
                 throw new Error(data.message || 'Failed to send OTP');
             }
-
+ 
             if (data.devOtp) {
-                toast.success(`OTP: ${data.devOtp} (Development mode)`);
+                // Remove dev-only toast to match production behavior as requested
+                toast.success('OTP sent to your email');
             } else {
                 toast.success('OTP sent to your email');
             }
@@ -55,11 +56,27 @@ export default function ForgotPasswordPage() {
                 throw new Error('Passwords do not match');
             }
 
-            if (formData.newPassword.length < 8) {
-                throw new Error('Password must be at least 8 characters');
+            if (formData.newPassword.length < 6) {
+                throw new Error('Password must be at least 6 characters');
             }
 
-            const res = await fetch('/api/auth/forgot-password', {
+            // 1. Verify OTP first
+            const verifyRes = await fetch('/api/auth/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: formData.email,
+                    otp: formData.otp
+                })
+            });
+
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) {
+                throw new Error(verifyData.message || 'Invalid OTP');
+            }
+
+            // 2. Reset Password
+            const resetRes = await fetch('/api/auth/reset-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -69,10 +86,10 @@ export default function ForgotPasswordPage() {
                 })
             });
 
-            const data = await res.json();
+            const resetData = await resetRes.json();
 
-            if (!res.ok) {
-                throw new Error(data.message || 'Failed to reset password');
+            if (!resetRes.ok) {
+                throw new Error(resetData.message || 'Failed to reset password');
             }
 
             toast.success('Password reset successfully');

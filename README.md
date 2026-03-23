@@ -1,8 +1,8 @@
 <div align="center">
   <h1><img src="https://gocartshop.in/favicon.ico" width="20" height="20" alt="GoCart Favicon">
-   GoCart</h1>
+   MOOYAM - Premium E-Commerce Platform</h1>
   <p>
-    An open-source multi-vendor e-commerce platform built with Next.js and Tailwind CSS.
+    A modern multi-vendor e-commerce platform with OAuth 2.0 authentication, built with Next.js 15 and Tailwind CSS.
   </p>
   <p>
     <a href="https://github.com/GreatStackDev/goCart/blob/main/LICENSE.md"><img src="https://img.shields.io/github/license/GreatStackDev/goCart?style=for-the-badge" alt="License"></a>
@@ -23,45 +23,141 @@
 
 ---
 
-## Features
+## ✨ Features
 
-- **Multi-Vendor Architecture:** Allows multiple vendors to register, manage their own products, and sell on a single platform.
-- **Customer-Facing Storefront:** A beautiful and responsive user interface for customers to browse and purchase products.
-- **Vendor Dashboards:** Dedicated dashboards for vendors to manage products, view sales analytics, and track orders.
-- **Admin Panel:** A comprehensive dashboard for platform administrators to oversee vendors, products, and commissions.
+### 🔐 Authentication & Security
+- **OAuth 2.0 Support**: Sign in with Google or GitHub
+- **Traditional Login**: Email/password authentication with bcrypt hashing
+- **Admin Panel**: Secure admin dashboard with role-based access
+- **Rate Limiting**: Protection against brute force attacks
+- **JWT Sessions**: Secure, scalable session management
+
+### 🛍️ E-Commerce Features
+- **Multi-Vendor Architecture**: Multiple vendors can sell on one platform
+- **Product Management**: Add, edit, and manage products with categories
+- **Shopping Cart**: Redux-powered cart with persistent storage
+- **Wishlist**: Save favorite products for later
+- **Order Tracking**: Real-time order status updates
+- **Coupon System**: Discount codes and promotional offers
+- **Product Reviews**: Rating and review system
+- **Address Management**: Multiple shipping addresses per user
+
+### 🎨 User Experience
+- **Responsive Design**: Mobile-first, works on all devices
+- **Modern UI**: Built with Tailwind CSS and Framer Motion
+- **Smooth Animations**: Delightful micro-interactions
+- **Search & Filters**: Advanced product filtering options
 
 ## 🛠️ Tech Stack <a name="-tech-stack"></a>
 
-- **Framework:** Next.js
-- **Styling:** Tailwind CSS
-- **UI Components:** Lucide React for icons
+### Frontend
+- **Framework:** Next.js 15 (App Router)
+- **Styling:** Tailwind CSS v4
+- **UI Components:** Lucide React icons, Framer Motion
 - **State Management:** Redux Toolkit
+- **Charts:** Recharts
+
+### Backend
+- **Database:** MongoDB
+- **ORM:** Prisma
+- **Authentication:** NextAuth.js with OAuth 2.0
+- **Password Hashing:** bcryptjs
+
+### Development
+- **Testing:** Jest, React Testing Library
+- **Build Tool:** Turbopack
+- **Package Manager:** npm
 
 ## 🚀 Getting Started <a name="-getting-started"></a>
 
-First, install the dependencies. We recommend using `npm` for this project.
+### Prerequisites
 
-```bash
-npm install
+- Node.js (v18 or higher)
+- MongoDB (local or cloud instance)
+- npm or yarn
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd ECOMMERWEBSITE_Cream
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Fill in the required values in `.env` (see Configuration below)
+
+4. **Generate secrets**
+   ```bash
+   npm run generate-secrets
+   ```
+
+5. **Set up the database**
+   ```bash
+   npm run prisma:generate
+   npm run prisma:push
+   ```
+
+6. **Test your configuration** (Optional)
+   ```bash
+   npm run test-oauth-config
+   ```
+
+7. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+
+Open [http://localhost:3000](http://localhost:3000) to see your application.
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and configure:
+
+```env
+# Database
+DATABASE_URL="mongodb://localhost:27017/ecommerce"
+
+# NextAuth
+NEXTAUTH_SECRET="your-secret-here"
+NEXTAUTH_URL="http://localhost:3000"
+
+# Admin
+ADMIN_EMAIL="admin@example.com"
+ADMIN_PASSWORD_HASH="$2b$10$your-hash"
+
+# OAuth Providers (Optional but recommended)
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-secret"
+GITHUB_CLIENT_ID="your-github-client-id"
+GITHUB_CLIENT_SECRET="your-github-secret"
 ```
 
-Then, run the development server:
+### Setting Up OAuth 2.0
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+For detailed OAuth setup instructions, see:
+- 📄 [Complete OAuth Setup Guide](./OAUTH_SETUP.md)
+- ✅ [Quick Setup Checklist](./QUICK_OAUTH_CHECKLIST.md)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/(public)/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Outfit](https://vercel.com/font), a new font family for Vercel.
+**Quick Start:**
+1. Run `npm run generate-secrets` to create secure keys
+2. Configure Google OAuth at https://console.cloud.google.com/apis/credentials
+3. Configure GitHub OAuth at https://github.com/settings/developers
+4. Add your credentials to `.env`
+5. Run `npm run test-oauth-config` to verify
 
 ---
 
@@ -75,11 +171,26 @@ We welcome contributions! Please see our [CONTRIBUTING.md](./CONTRIBUTING.md) fo
 
 This project is licensed under the MIT License. See the [LICENSE.md](./LICENSE.md) file for details.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 📚 Additional Resources
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [OAuth 2.0 Setup Guide](./OAUTH_SETUP.md) - Complete OAuth configuration tutorial
+- [Quick Setup Checklist](./QUICK_OAUTH_CHECKLIST.md) - 5-minute OAuth setup guide
+- [Next.js Documentation](https://nextjs.org/docs) - Next.js features and API
+- [Learn Next.js](https://nextjs.org/learn) - Interactive Next.js tutorial
+- [Prisma Docs](https://www.prisma.io/docs/) - Database ORM reference
+- [Tailwind CSS](https://tailwindcss.com/docs) - Utility-first CSS framework
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
+
+## 👥 Support
+
+For questions, issues, or feature requests, please:
+- Open an issue on GitHub
+- Check existing documentation
+- Review the FAQ section
+
+---
+
+**Built with ❤️ using Next.js and Tailwind CSS**

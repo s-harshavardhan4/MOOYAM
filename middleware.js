@@ -2,10 +2,13 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 
 export async function middleware(req) {
-    const token = await getToken({ req });
+    const token = await getToken({ 
+        req, 
+        secret: process.env.NEXTAUTH_SECRET 
+    });
     const { pathname } = req.nextUrl;
     
-    // Explicitly bypass all API routes
+    // Explicitly bypass all API routes (including /api/auth)
     if (pathname.startsWith("/api")) {
         return NextResponse.next();
     }
@@ -14,7 +17,7 @@ export async function middleware(req) {
     const isAdminRoute = pathname.startsWith("/admin");
 
     // Define routes that require authentication for normal users
-    const isProtectedRoute = ["/checkout", "/orders", "/profile", "/cart"].some(route => pathname.startsWith(route));
+    const isProtectedRoute = ["/checkout", "/orders", "/profile", "/cart", "/account"].some(route => pathname.startsWith(route));
 
     // If user is logged in
     if (token) {
@@ -31,7 +34,9 @@ export async function middleware(req) {
                 return NextResponse.redirect(new URL("/", req.url));
             }
             if (isAuthRoute) {
-                return NextResponse.redirect(new URL("/", req.url));
+                // Preserve callbackUrl if user is already logged in
+                const callbackUrl = req.nextUrl.searchParams.get("callbackUrl") || "/";
+                return NextResponse.redirect(new URL(callbackUrl, req.url));
             }
         }
     }

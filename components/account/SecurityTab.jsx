@@ -20,6 +20,14 @@ export default function SecurityTab() {
     const [updatingName, setUpdatingName] = useState(false);
     const [updatingPassword, setUpdatingPassword] = useState(false);
     const [deletingAccount, setDeletingAccount] = useState(false);
+    
+    // OTP states for OAuth users
+    const [showOtpField, setShowOtpField] = useState(false);
+    const [otp, setOtp] = useState("");
+    const [sendingOtp, setSendingOtp] = useState(false);
+    const [otpSent, setOtpSent] = useState(false);
+    const [isOtpVerified, setIsOtpVerified] = useState(false);
+    const [verifyingOtp, setVerifyingOtp] = useState(false);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -65,8 +73,57 @@ export default function SecurityTab() {
         }
     };
 
+    const handleSendOtp = async () => {
+        setSendingOtp(true);
+        try {
+            const res = await fetch('/api/auth/send-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: user.email })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setOtpSent(true);
+                setShowOtpField(true);
+                toast.success("OTP sent to your email");
+            } else {
+                toast.error(data.message || "Failed to send OTP");
+            }
+        } catch (error) {
+            toast.error("Error sending OTP");
+        } finally {
+            setSendingOtp(false);
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        if (!otp || otp.length !== 6) return toast.error("Please enter a 6-digit OTP");
+        
+        setVerifyingOtp(true);
+        try {
+            const res = await fetch('/api/auth/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: user.email, otp })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setIsOtpVerified(true);
+                toast.success("Email verified! You can now set your password.");
+            } else {
+                toast.error(data.message || "Invalid OTP");
+            }
+        } catch (error) {
+            toast.error("Error verifying OTP");
+        } finally {
+            setVerifyingOtp(false);
+        }
+    };
+
     const handleUpdatePassword = async (e) => {
         e.preventDefault();
+        
+        // Validation
         if (newPassword !== confirmPassword) {
             return toast.error("New passwords do not match");
         }
@@ -74,25 +131,48 @@ export default function SecurityTab() {
             return toast.error("Password must be at least 6 characters");
         }
 
+        // If user has no password, they MUST provide an OTP
+        if (!user?.hasPassword && !otp) {
+            return toast.error("Please provide the OTP sent to your email");
+        }
+
         setUpdatingPassword(true);
         try {
-            const res = await fetch('/api/user/profile', {
-                method: 'PATCH',
+            // Updated logic: Step 1 handled by handleVerifyOtp
+            
+            // Step 2: Reset/Set Password
+            const endpoint = user?.hasPassword ? '/api/user/profile' : '/api/auth/reset-password';
+            const method = user?.hasPassword ? 'PATCH' : 'POST';
+            const body = user?.hasPassword 
+                ? { currentPassword, newPassword } 
+                : { email: user.email, otp, newPassword };
+
+            const res = await fetch(endpoint, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ currentPassword, newPassword })
+                body: JSON.stringify(body)
             });
             const data = await res.json();
 
             if (data.success) {
-                toast.success("Password updated successfully");
+                toast.success(user?.hasPassword ? "Password updated successfully" : "Password set successfully");
                 setCurrentPassword("");
                 setNewPassword("");
                 setConfirmPassword("");
+                setOtp("");
+                setShowOtpField(false);
+                setOtpSent(false);
+                
+                // Refresh user state to show they now have a password
+                const refreshRes = await fetch('/api/user/profile');
+                const refreshData = await refreshRes.json();
+                if (refreshData.success) setUser(refreshData.user);
+
             } else {
                 toast.error(data.message || "Failed to update password");
             }
         } catch (error) {
-            toast.error("An error occurred");
+            toast.error(error.message || "An error occurred");
         } finally {
             setUpdatingPassword(false);
         }
@@ -169,48 +249,109 @@ export default function SecurityTab() {
             <div className="mb-10">
                 <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-800 mb-4">
                     <Lock size={18} className="text-[#D4A398]" />
-                    Change Password
+                    {user?.hasPassword ? "Change Password" : "Set Account Password"}
                 </h3>
                 <form onSubmit={handleUpdatePassword} className="bg-gray-50/50 p-6 rounded-xl border border-gray-100 flex flex-col gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                        <input
-                            type="password"
-                            value={currentPassword}
-                            onChange={(e) => setCurrentPassword(e.target.value)}
-                            className="w-full md:w-2/3 p-2.5 outline-none border border-gray-200 rounded-lg focus:border-[#D4A398] transition-all"
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                        <input
-                            type="password"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            className="w-full md:w-2/3 p-2.5 outline-none border border-gray-200 rounded-lg focus:border-[#D4A398] transition-all"
-                            required
-                            minLength={6}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                        <input
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full md:w-2/3 p-2.5 outline-none border border-gray-200 rounded-lg focus:border-[#D4A398] transition-all"
-                            required
-                            minLength={6}
-                        />
-                    </div>
+                    {!user?.hasPassword ? (
+                        <div className="flex flex-col gap-3">
+                            <p className="text-sm text-gray-600 mb-2">
+                                You signed in with Google. To enable email/password login, please verify your email and set a password.
+                            </p>
+                            {!otpSent ? (
+                                <button
+                                    type="button"
+                                    onClick={handleSendOtp}
+                                    disabled={sendingOtp}
+                                    className="w-fit px-4 py-2 bg-[#D4A398] hover:bg-[#c99285] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                                >
+                                    {sendingOtp && <Loader2 size={16} className="animate-spin" />}
+                                    Send Verification OTP
+                                </button>
+                            ) : !isOtpVerified ? (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Enter OTP sent to your email</label>
+                                    <div className="flex items-center gap-4">
+                                        <input
+                                            type="text"
+                                            value={otp}
+                                            onChange={(e) => setOtp(e.target.value)}
+                                            placeholder="6-digit code"
+                                            className="w-full md:w-1/3 p-2.5 outline-none border border-gray-200 rounded-lg focus:border-[#D4A398] transition-all text-center tracking-widest font-bold"
+                                            maxLength={6}
+                                            required
+                                        />
+                                        <button 
+                                            type="button" 
+                                            onClick={handleVerifyOtp}
+                                            disabled={verifyingOtp || otp.length !== 6}
+                                            className="px-4 py-2.5 bg-[#2C2C2C] text-white rounded-lg text-xs font-medium hover:bg-black disabled:opacity-50 transition-all flex items-center gap-2"
+                                        >
+                                            {verifyingOtp && <Loader2 size={14} className="animate-spin" />}
+                                            Verify OTP
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onClick={handleSendOtp}
+                                            className="text-xs text-gray-400 hover:text-[#D4A398] hover:underline"
+                                        >
+                                            Resend
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-3 bg-green-50 border border-green-100 rounded-lg text-green-700 text-sm flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                    Email verified successfully. Please set your new password below.
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                            <input
+                                type="password"
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                className="w-full md:w-2/3 p-2.5 outline-none border border-gray-200 rounded-lg focus:border-[#D4A398] transition-all"
+                                required
+                            />
+                        </div>
+                    )}
+                    
+                    {(user?.hasPassword || isOtpVerified) && (
+                        <>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                                <input
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="w-full md:w-2/3 p-2.5 outline-none border border-gray-200 rounded-lg focus:border-[#D4A398] transition-all"
+                                    required
+                                    minLength={6}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                                <input
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="w-full md:w-2/3 p-2.5 outline-none border border-gray-200 rounded-lg focus:border-[#D4A398] transition-all"
+                                    required
+                                    minLength={6}
+                                />
+                            </div>
+                        </>
+                    )}
+                    
                     <button
                         type="submit"
-                        disabled={updatingPassword || !currentPassword || !newPassword || !confirmPassword}
+                        disabled={updatingPassword || (!user?.hasPassword && !isOtpVerified) || (user?.hasPassword && !currentPassword) || !newPassword || !confirmPassword}
                         className="mt-2 w-fit px-6 py-2 bg-[#2C2C2C] hover:bg-black text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                         {updatingPassword && <Loader2 size={16} className="animate-spin" />}
-                        Update Password
+                        {user?.hasPassword ? "Update Password" : "Set Password"}
                     </button>
                 </form>
             </div>
