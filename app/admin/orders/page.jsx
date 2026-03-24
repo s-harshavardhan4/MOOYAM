@@ -47,11 +47,36 @@ export default function AdminOrders() {
             const data = await res.json()
             if (data.success) {
                 setOrders(prevOrders =>
-                    prevOrders.map(o => o.id === orderId ? { ...o, status } : o)
+                    prevOrders.map(o => o.id === orderId ? { 
+                        ...o, 
+                        status, 
+                        isPaid: (status === 'DELIVERED' && o.paymentMethod === 'COD') ? true : o.isPaid 
+                    } : o)
                 )
             }
         } catch (error) {
             console.error('Failed to update status')
+        }
+    }
+
+    const updateOrderPayment = async (orderId, isPaid) => {
+        try {
+            const res = await fetch('/api/admin/orders', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, isPaid })
+            })
+            const data = await res.json()
+            if (data.success) {
+                setOrders(prevOrders =>
+                    prevOrders.map(o => o.id === orderId ? { ...o, isPaid } : o)
+                )
+                if (selectedOrder && selectedOrder.id === orderId) {
+                    setSelectedOrder(prev => ({ ...prev, isPaid }))
+                }
+            }
+        } catch (error) {
+            console.error('Failed to update payment status')
         }
     }
 
@@ -125,16 +150,26 @@ export default function AdminOrders() {
                                         )}
                                     </td>
                                     <td className="px-4 py-3" onClick={(e) => { e.stopPropagation() }}>
-                                        <select
-                                            value={order.status}
-                                            onChange={e => updateOrderStatus(order.id, e.target.value)}
-                                            className="border-gray-300 rounded-md text-sm focus:ring focus:ring-blue-200"
-                                        >
-                                            <option value="ORDER_PLACED">ORDER_PLACED</option>
-                                            <option value="PROCESSING">PROCESSING</option>
-                                            <option value="SHIPPED">SHIPPED</option>
-                                            <option value="DELIVERED">DELIVERED</option>
-                                        </select>
+                                        <div className="flex items-center gap-2">
+                                            <select
+                                                value={order.status}
+                                                onChange={e => updateOrderStatus(order.id, e.target.value)}
+                                                className="border-gray-300 rounded-md text-sm focus:ring focus:ring-blue-200"
+                                            >
+                                                <option value="ORDER_PLACED">ORDER_PLACED</option>
+                                                <option value="PROCESSING">PROCESSING</option>
+                                                <option value="SHIPPED">SHIPPED</option>
+                                                <option value="DELIVERED">DELIVERED</option>
+                                            </select>
+                                            {order.status === 'DELIVERED' && !order.isPaid && (
+                                                <button 
+                                                    onClick={() => updateOrderPayment(order.id, true)}
+                                                    className="text-[10px] bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition-colors"
+                                                >
+                                                    Mark Paid
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-4 py-3 text-gray-500">
                                         {new Date(order.createdAt).toLocaleString()}
@@ -187,7 +222,15 @@ export default function AdminOrders() {
                         {/* Payment & Status */}
                         <div className="mb-4">
                             <p><span className="text-green-700">Payment Method:</span> {selectedOrder.paymentMethod}</p>
-                            <p><span className="text-green-700">Paid:</span> {selectedOrder.isPaid ? "Yes" : "No"}</p>
+                            <div className="flex items-center gap-2">
+                                <p><span className="text-green-700">Paid:</span> {selectedOrder.isPaid ? "Yes" : "No"}</p>
+                                <button 
+                                    onClick={() => updateOrderPayment(selectedOrder.id, !selectedOrder.isPaid)}
+                                    className={`text-[10px] px-2 py-0.5 rounded transition-colors ${selectedOrder.isPaid ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'bg-green-100 text-green-600 hover:bg-green-200'}`}
+                                >
+                                    {selectedOrder.isPaid ? "Mark Unpaid" : "Mark Paid"}
+                                </button>
+                            </div>
                             {selectedOrder.isCouponUsed && (
                                 <p><span className="text-green-700">Coupon:</span> {selectedOrder.coupon.code} ({selectedOrder.coupon.discount}% off)</p>
                             )}

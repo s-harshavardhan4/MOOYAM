@@ -77,17 +77,31 @@ const ProductDetails = ({ product }) => {
                     <TagIcon size={14} />
                     <p>Save {((product.mrp - product.price) / product.mrp * 100).toFixed(0)}% right now</p>
                 </div>
+                {product.inStock && product.quantity > 0 && product.quantity < 5 && (
+                    <p className="text-red-600 text-sm mt-3 font-medium">Only {product.quantity} units left! Order soon.</p>
+                )}
+                {!product.inStock || product.quantity <= 0 ? (
+                     <p className="text-red-600 text-sm mt-3 font-medium">Currently Out of Stock</p>
+                ) : null}
                 <div className="flex items-end gap-5 mt-10">
                     {
                         cart[productId] && (
                             <div className="flex flex-col gap-3">
                                 <p className="text-lg text-[#2C2C2C] font-serif font-medium">Quantity</p>
-                                <Counter productId={productId} />
+                                <Counter productId={productId} max={product.quantity} />
                             </div>
                         )
                     }
-                    <button onClick={() => !cart[productId] ? addToCartHandler() : router.push('/cart')} className="bg-[#D4A398] text-white px-10 py-3 text-sm font-medium rounded-full shadow-md shadow-[#D4A398]/30 hover:bg-[#C69C6D] active:scale-95 transition-all">
-                        {!cart[productId] ? 'Add to Cart' : 'View Cart'}
+                    <button 
+                        onClick={() => !cart[productId] ? addToCartHandler() : router.push('/cart')} 
+                        disabled={!product.inStock || product.quantity <= 0}
+                        className={`px-10 py-3 text-sm font-medium rounded-full shadow-md transition-all active:scale-95 ${
+                            (!product.inStock || product.quantity <= 0) 
+                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none' 
+                            : 'bg-[#D4A398] text-white shadow-[#D4A398]/30 hover:bg-[#C69C6D]'
+                        }`}
+                    >
+                        {(!product.inStock || product.quantity <= 0) ? 'Out of Stock' : (!cart[productId] ? 'Add to Cart' : 'View Cart')}
                     </button>
                     <button onClick={handleWishlistToggle} className="h-11 px-6 rounded-full border border-[#D4A398]/30 flex items-center justify-center text-[#D4A398] bg-white hover:bg-[#F9F3F1] transition-colors shadow-sm">
                         <HeartIcon size={20} fill={isSaved ? "#D4A398" : "none"} />

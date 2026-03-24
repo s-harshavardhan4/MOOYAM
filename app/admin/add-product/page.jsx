@@ -28,6 +28,7 @@ export default function AdminAddProduct() {
         price: 0,
         category: "",
         subCategory: "",
+        quantity: 0,
     })
     const [loading, setLoading] = useState(false)
 
@@ -60,6 +61,7 @@ export default function AdminAddProduct() {
                     price: parseFloat(productInfo.price),
                     category: productInfo.category,
                     subCategory: productInfo.subCategory || undefined,
+                    quantity: productInfo.quantity,
                     images: dummyImages
                 })
             })
@@ -68,7 +70,7 @@ export default function AdminAddProduct() {
 
             if (response.ok) {
                 // Reset form on success
-                setProductInfo({ name: "", description: "", mrp: 0, price: 0, category: "", subCategory: "" })
+                setProductInfo({ name: "", description: "", mrp: 0, price: 0, category: "", subCategory: "", quantity: 0 })
                 setImages({ 1: null, 2: null, 3: null, 4: null })
                 return Promise.resolve(data)
             } else {
@@ -116,6 +118,10 @@ export default function AdminAddProduct() {
                 <label htmlFor="" className="flex flex-col gap-2 ">
                     Offer Price (₹)
                     <input type="number" name="price" onChange={onChangeHandler} value={productInfo.price} placeholder="0" rows={5} className="w-full max-w-45 p-2 px-4 outline-none border border-slate-200 rounded resize-none" required />
+                </label>
+                <label htmlFor="" className="flex flex-col gap-2 ">
+                    Initial Quantity
+                    <input type="number" name="quantity" onChange={onChangeHandler} value={productInfo.quantity} placeholder="0" rows={5} className="w-full max-w-45 p-2 px-4 outline-none border border-slate-200 rounded resize-none" required />
                 </label>
             </div>
 

@@ -15,7 +15,7 @@ jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
 }));
 
-jest.mock('../../app/api/auth/[...nextauth]/route', () => ({
+jest.mock('../../lib/auth', () => ({
   authOptions: {},
 }));
 
@@ -62,6 +62,7 @@ describe('Orders API', () => {
       find: jest.fn().mockReturnValue(mockCursor),
       insertOne: jest.fn().mockResolvedValue({ insertedId: { toString: () => '64f1a2b3c4d5e6f7a8b9c0d5' } }),
       insertMany: jest.fn().mockResolvedValue({}),
+      updateOne: jest.fn().mockResolvedValue({}),
     };
 
     mockDb = {
@@ -99,14 +100,20 @@ describe('Orders API', () => {
   describe('POST', () => {
     it('should return 401 if user is not authenticated for POST', async () => {
       getServerSession.mockResolvedValueOnce(null);
-      const request = { json: jest.fn().mockResolvedValue({}) };
+      const request = { 
+        json: jest.fn().mockResolvedValue({}),
+        headers: { get: jest.fn().mockReturnValue('127.0.0.1') }
+      };
       const response = await POST(request);
       
       expect(response.status).toBe(401);
     });
 
     it('should return 400 if required fields are missing', async () => {
-      const request = { json: jest.fn().mockResolvedValue({ total: 100 }) };
+      const request = { 
+        json: jest.fn().mockResolvedValue({ total: 100 }),
+        headers: { get: jest.fn().mockReturnValue('127.0.0.1') }
+      };
       const response = await POST(request);
       
       expect(response.status).toBe(400);
@@ -115,7 +122,7 @@ describe('Orders API', () => {
     it('should create an order successfully', async () => {
       // Setup product price check
       mockCursor.toArray.mockResolvedValueOnce([
-        { _id: '64f1a2b3c4d5e6f7a8b9c0d4', price: 150 }
+        { _id: '64f1a2b3c4d5e6f7a8b9c0d4', price: 150, quantity: 10, inStock: true }
       ]);
       
       const payload = {
@@ -126,7 +133,10 @@ describe('Orders API', () => {
         coupon: null
       };
       
-      const request = { json: jest.fn().mockResolvedValue(payload) };
+      const request = { 
+        json: jest.fn().mockResolvedValue(payload),
+        headers: { get: jest.fn().mockReturnValue('127.0.0.1') }
+      };
       const response = await POST(request);
       const data = await response.json();
       
@@ -135,6 +145,32 @@ describe('Orders API', () => {
       expect(data.order.id).toBe('64f1a2b3c4d5e6f7a8b9c0d5');
       expect(data.order.total).toBe(150);
       expect(data.order.status).toBe('ORDER_PLACED');
+    });
+
+    it('should fail to create order if product is out of stock', async () => {
+      // Setup product check with 0 quantity
+      mockCursor.toArray.mockResolvedValueOnce([
+        { _id: '64f1a2b3c4d5e6f7a8b9c0d4', name: 'Test Product', price: 150, quantity: 0, inStock: true }
+      ]);
+      
+      const payload = {
+        total: 150,
+        items: [{ id: '64f1a2b3c4d5e6f7a8b9c0d4', quantity: 1 }],
+        addressId: '64f1a2b3c4d5e6f7a8b9c0d2',
+        paymentMethod: 'credit_card',
+        coupon: null
+      };
+      
+      const request = { 
+        json: jest.fn().mockResolvedValue(payload),
+        headers: { get: jest.fn().mockReturnValue('127.0.0.1') }
+      };
+      const response = await POST(request);
+      const data = await response.json();
+      
+      expect(response.status).toBe(400);
+      expect(data.success).toBe(false);
+      expect(data.message).toContain('Insufficient stock');
     });
   });
 });

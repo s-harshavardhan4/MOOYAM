@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 
 // A mock database of valid coupons for demonstration.
 // In a real application, this would fetch from the MongoDB 'Coupon' collection.

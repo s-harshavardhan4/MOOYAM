@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
 
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -118,6 +118,25 @@ export async function POST(request) {
 
         const dbProductMap = new Map(dbProducts.map(p => [p._id.toString(), p]));
 
+        // --- NEW: Stock Validation ---
+        for (const item of items) {
+            const productId = item.id || item.productId;
+            const dbProduct = dbProductMap.get(productId);
+            const requestedQty = item.quantity || 1;
+
+            if (!dbProduct) {
+                return NextResponse.json({ success: false, message: `Product not found: ${productId}` }, { status: 404 });
+            }
+
+            if (!dbProduct.inStock || (dbProduct.quantity !== undefined && dbProduct.quantity < requestedQty)) {
+                return NextResponse.json({ 
+                    success: false, 
+                    message: `Insufficient stock for ${dbProduct.name}. ${dbProduct.quantity || 0} left.` 
+                }, { status: 400 });
+            }
+        }
+        // --- END: Stock Validation ---
+
         const verifiedTotal = dbProducts.reduce((sum, dbProduct) => {
             const cartItem = items.find(i => (i.id || i.productId) === dbProduct._id.toString());
             return sum + (dbProduct.price * (cartItem?.quantity || 1));
@@ -159,6 +178,25 @@ export async function POST(request) {
 
         if (rawOrderItems.length > 0) {
             await orderItemsCollection.insertMany(rawOrderItems);
+
+            // --- NEW: Stock Decrement ---
+            for (const item of rawOrderItems) {
+                const dbProduct = dbProductMap.get(item.productId);
+                const newQuantity = Math.max(0, (dbProduct.quantity || 0) - item.quantity);
+                const inStock = newQuantity > 0;
+
+                await database.collection("Product").updateOne(
+                    { _id: new ObjectId(item.productId) },
+                    { 
+                        $set: { 
+                            quantity: newQuantity,
+                            inStock: inStock,
+                            updatedAt: new Date()
+                        } 
+                    }
+                );
+            }
+            // --- END: Stock Decrement ---
         }
 
         delete orderData._id;

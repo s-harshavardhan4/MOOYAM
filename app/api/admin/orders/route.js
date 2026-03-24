@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { authOptions } from "@/lib/auth";
 import { getDb } from "@/lib/mongodb";
 
 export async function GET() {
@@ -109,18 +109,31 @@ export async function PUT(request) {
         }
 
         const body = await request.json();
-        const { orderId, status } = body;
+        const { orderId, status, isPaid } = body;
 
-        if (!orderId || !status) {
-            return NextResponse.json({ success: false, message: 'Missing orderId or status' }, { status: 400 });
+        if (!orderId) {
+            return NextResponse.json({ success: false, message: 'Missing orderId' }, { status: 400 });
         }
 
         const { db: database } = await getDb("cosmeticsdb");
         const orders = database.collection("Order");
 
+        // Prepare the update object
+        const updateData = { updatedAt: new Date() };
+        if (status) updateData.status = status;
+        if (typeof isPaid === 'boolean') updateData.isPaid = isPaid;
+
+        // If status is being set to DELIVERED, automatically mark COD as paid
+        if (status === 'DELIVERED') {
+            const order = await orders.findOne({ _id: new ObjectId(orderId) });
+            if (order && order.paymentMethod && order.paymentMethod.trim().toUpperCase() === 'COD') {
+                updateData.isPaid = true;
+            }
+        }
+
         const result = await orders.updateOne(
             { _id: new ObjectId(orderId) },
-            { $set: { status: status, updatedAt: new Date() } }
+            { $set: updateData }
         );
 
         if (result.matchedCount === 0) {

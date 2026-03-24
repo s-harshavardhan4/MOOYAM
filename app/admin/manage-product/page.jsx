@@ -11,7 +11,7 @@ export default function AdminManageProducts() {
 
     const fetchProducts = async () => {
         try {
-            const res = await fetch('/api/products')
+            const res = await fetch('/api/admin/products/stats')
             const data = await res.json()
             if (data.success) {
                 setProducts(data.products)
@@ -65,6 +65,22 @@ export default function AdminManageProducts() {
         }
     }
 
+    const handleQuantityManualChange = async (id, value) => {
+        const newQuantity = parseInt(value)
+        if (isNaN(newQuantity) || newQuantity < 0) return;
+
+        const product = products.find(p => p.id === id)
+        if (product && product.quantity === newQuantity) return;
+
+        const success = await updateProduct(id, { quantity: newQuantity })
+        if (success) {
+            setProducts(products.map(p => p.id === id ? { ...p, quantity: newQuantity } : p))
+            toast.success("Quantity updated")
+        } else {
+            toast.error("Failed to update quantity")
+        }
+    }
+
     const handlePriceChange = async (id, field, value) => {
         const numValue = parseFloat(value)
         if (isNaN(numValue)) return;
@@ -92,14 +108,28 @@ export default function AdminManageProducts() {
                     <thead className="bg-slate-50 text-gray-700 uppercase tracking-wider">
                         <tr>
                             <th className="px-4 py-3">Name</th>
-                            <th className="px-4 py-3 hidden md:table-cell">MRP</th>
+                            <th className="px-4 py-3">MRP</th>
                             <th className="px-4 py-3">Price</th>
                             <th className="px-4 py-3">Quantity</th>
+                            <th className="px-4 py-3">Performance</th>
                             <th className="px-4 py-3">Visible</th>
                         </tr>
                     </thead>
                     <tbody className="text-slate-700">
-                        {products.map((product) => (
+                        {products.map((product) => {
+                            const salesCount = product.salesCount || 0;
+                            // Basic logic for trending/lagging
+                            let performance = "Stable";
+                            let perfColor = "text-slate-500";
+                            
+                            if (salesCount > 10) {
+                                performance = "Trending 🔥";
+                                perfColor = "text-orange-600 font-semibold";
+                            } else if (salesCount === 0) {
+                                performance = "Lagging 📉";
+                                perfColor = "text-red-400";
+                            }
+                            return (
                             <tr key={product.id} className="border-t border-gray-200 hover:bg-gray-50">
                                 <td className="px-4 py-3">
                                     <div className="flex gap-3 items-center">
@@ -107,7 +137,7 @@ export default function AdminManageProducts() {
                                         <span className="truncate max-w-[200px] block" title={product.name}>{product.name}</span>
                                     </div>
                                 </td>
-                                <td className="px-4 py-3 hidden md:table-cell">
+                                <td className="px-4 py-3">
                                     <div className="flex items-center gap-1">
                                         <span>{currency}</span>
                                         <input
@@ -137,12 +167,25 @@ export default function AdminManageProducts() {
                                         />
                                     </div>
                                 </td>
-                                <td className="px-4 py-3">
+                                 <td className="px-4 py-3">
                                     <div className="flex items-center gap-2">
                                         <button onClick={() => handleQuantityChange(product.id, product.quantity || 0, -1)} className="bg-slate-200 hover:bg-slate-300 w-6 h-6 rounded flex items-center justify-center font-bold">-</button>
-                                        <span className="w-8 text-center">{product.quantity || 0}</span>
+                                        <input
+                                            key={`${product.id}-${product.quantity}`}
+                                            type="number"
+                                            defaultValue={product.quantity || 0}
+                                            onBlur={(e) => {
+                                                if (e.target.value != product.quantity) {
+                                                    handleQuantityManualChange(product.id, e.target.value)
+                                                }
+                                            }}
+                                            className={`w-12 text-center border border-gray-300 rounded-md text-sm p-1 ${product.quantity < 5 ? 'text-red-600 font-bold' : ''}`}
+                                        />
                                         <button onClick={() => handleQuantityChange(product.id, product.quantity || 0, 1)} className="bg-slate-200 hover:bg-slate-300 w-6 h-6 rounded flex items-center justify-center font-bold">+</button>
                                     </div>
+                                </td>
+                                <td className={`px-4 py-3 text-xs uppercase tracking-tight ${perfColor}`}>
+                                    {performance}
                                 </td>
                                 <td className="px-4 py-3">
                                     <label className="relative inline-flex items-center cursor-pointer text-gray-900 gap-3">
@@ -152,7 +195,7 @@ export default function AdminManageProducts() {
                                     </label>
                                 </td>
                             </tr>
-                        ))}
+                        )})}
                     </tbody>
                 </table>
             </div>

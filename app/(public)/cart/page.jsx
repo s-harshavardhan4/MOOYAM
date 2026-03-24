@@ -28,7 +28,7 @@ export default function Cart() {
             if (product) {
                 cartArray.push({
                     ...product,
-                    quantity: value,
+                    cartQuantity: value,
                 });
                 setTotalPrice(prev => prev + product.price * value);
             }
@@ -79,9 +79,9 @@ export default function Cart() {
                                             </div>
                                         </td>
                                         <td className="text-center">
-                                            <Counter productId={item.id} />
+                                            <Counter productId={item.id} max={item.quantity} />
                                         </td>
-                                        <td className="text-center">{currency}{(item.price * item.quantity).toLocaleString()}</td>
+                                        <td className="text-center">{currency}{(item.price * item.cartQuantity).toLocaleString()}</td>
                                         <td className="text-center max-md:hidden">
                                             <button onClick={() => handleDeleteItemFromCart(item.id)} className=" text-red-500 hover:bg-red-50 p-2.5 rounded-full active:scale-95 transition-all">
                                                 <Trash2Icon size={18} />

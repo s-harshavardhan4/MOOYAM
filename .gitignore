@@ -41,3 +41,20 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+*.txt
+*.log
+test_results_*
+out-*
+addSubCat.js
+check-db.js
+check_local_users.js
+cleanup.js
+diagnose_db.js
+generate_secrets.js
+migrate-db.js
+seed_products.js
+seed_products_native.js
+test-mail.js
+testPrisma.js
+testReadPrisma.js
+test_oauth_config.js
