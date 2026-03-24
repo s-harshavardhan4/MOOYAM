@@ -13,9 +13,9 @@ export async function GET() {
 
         const { db: database } = await getDb("cosmeticsdb");
 
-        // Fetch only orders where payment method is not COD (i.e., STRIPE)
+        // Fetch orders where either it's NOT a COD order (e.g. Stripe) OR it IS a COD order that has been paid.
         const transactions = await database.collection("Order").aggregate([
-            { $match: { paymentMethod: { $ne: 'COD' } } },
+            { $match: { $or: [{ paymentMethod: { $ne: 'COD' } }, { isPaid: true }] } },
             { $sort: { createdAt: -1 } },
             // Join User for customer name
             {

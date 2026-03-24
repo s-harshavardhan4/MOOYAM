@@ -30,7 +30,7 @@ export default function AdminTransactions() {
         <>
             <h1 className="text-2xl text-slate-500 mb-5">Admin <span className="text-slate-800 font-medium">Transactions</span></h1>
             {transactions.length === 0 ? (
-                <p>No online transactions found.</p>
+                <p>No transactions found.</p>
             ) : (
                 <div className="overflow-x-auto max-w-5xl rounded-md shadow border border-gray-200">
                     <table className="w-full text-sm text-left text-gray-600">
