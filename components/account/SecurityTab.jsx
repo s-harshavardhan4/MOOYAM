@@ -28,6 +28,7 @@ export default function SecurityTab() {
     const [otpSent, setOtpSent] = useState(false);
     const [isOtpVerified, setIsOtpVerified] = useState(false);
     const [verifyingOtp, setVerifyingOtp] = useState(false);
+    const [isForgotMode, setIsForgotMode] = useState(false);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -131,9 +132,9 @@ export default function SecurityTab() {
             return toast.error("Password must be at least 6 characters");
         }
 
-        // If user has no password, they MUST provide an OTP
-        if (!user?.hasPassword && !otp) {
-            return toast.error("Please provide the OTP sent to your email");
+        // If user has no password OR is in forgot mode, they MUST have a verified OTP
+        if ((!user?.hasPassword || isForgotMode) && !isOtpVerified) {
+            return toast.error("Please verify the OTP sent to your email first");
         }
 
         setUpdatingPassword(true);
@@ -141,11 +142,12 @@ export default function SecurityTab() {
             // Updated logic: Step 1 handled by handleVerifyOtp
             
             // Step 2: Reset/Set Password
-            const endpoint = user?.hasPassword ? '/api/user/profile' : '/api/auth/reset-password';
-            const method = user?.hasPassword ? 'PATCH' : 'POST';
-            const body = user?.hasPassword 
-                ? { currentPassword, newPassword } 
-                : { email: user.email, otp, newPassword };
+            const isResetFlow = !user?.hasPassword || isForgotMode;
+            const endpoint = isResetFlow ? '/api/auth/reset-password' : '/api/user/profile';
+            const method = isResetFlow ? 'POST' : 'PATCH';
+            const body = isResetFlow 
+                ? { email: user.email, otp, newPassword }
+                : { currentPassword, newPassword };
 
             const res = await fetch(endpoint, {
                 method,
@@ -155,13 +157,15 @@ export default function SecurityTab() {
             const data = await res.json();
 
             if (data.success) {
-                toast.success(user?.hasPassword ? "Password updated successfully" : "Password set successfully");
+                toast.success(isResetFlow ? "Password reset successfully" : "Password updated successfully");
                 setCurrentPassword("");
                 setNewPassword("");
                 setConfirmPassword("");
                 setOtp("");
                 setShowOtpField(false);
                 setOtpSent(false);
+                setIsOtpVerified(false);
+                setIsForgotMode(false);
                 
                 // Refresh user state to show they now have a password
                 const refreshRes = await fetch('/api/user/profile');
@@ -305,9 +309,80 @@ export default function SecurityTab() {
                                 </div>
                             )}
                         </div>
+                    ) : isForgotMode ? (
+                        <div className="flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                                <p className="text-sm text-gray-600">
+                                    Forgot your password? Please verify your email to set a new one.
+                                </p>
+                                <button 
+                                    type="button" 
+                                    onClick={() => { setIsForgotMode(false); setOtpSent(false); setIsOtpVerified(false); setOtp(""); }}
+                                    className="text-xs text-gray-500 hover:text-[#D4A398] underline"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                            {!otpSent ? (
+                                <button
+                                    type="button"
+                                    onClick={handleSendOtp}
+                                    disabled={sendingOtp}
+                                    className="w-fit px-4 py-2 bg-[#D4A398] hover:bg-[#c99285] text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                                >
+                                    {sendingOtp && <Loader2 size={16} className="animate-spin" />}
+                                    Send Reset OTP
+                                </button>
+                            ) : !isOtpVerified ? (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Enter OTP sent to your email</label>
+                                    <div className="flex items-center gap-4">
+                                        <input
+                                            type="text"
+                                            value={otp}
+                                            onChange={(e) => setOtp(e.target.value)}
+                                            placeholder="6-digit code"
+                                            className="w-full md:w-1/3 p-2.5 outline-none border border-gray-200 rounded-lg focus:border-[#D4A398] transition-all text-center tracking-widest font-bold"
+                                            maxLength={6}
+                                            required
+                                        />
+                                        <button 
+                                            type="button" 
+                                            onClick={handleVerifyOtp}
+                                            disabled={verifyingOtp || otp.length !== 6}
+                                            className="px-4 py-2.5 bg-[#2C2C2C] text-white rounded-lg text-xs font-medium hover:bg-black disabled:opacity-50 transition-all flex items-center gap-2"
+                                        >
+                                            {verifyingOtp && <Loader2 size={14} className="animate-spin" />}
+                                            Verify OTP
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onClick={handleSendOtp}
+                                            className="text-xs text-gray-400 hover:text-[#D4A398] hover:underline"
+                                        >
+                                            Resend
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-3 bg-green-50 border border-green-100 rounded-lg text-green-700 text-sm flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                    Email verified! Please set your new password below.
+                                </div>
+                            )}
+                        </div>
                     ) : (
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="block text-sm font-medium text-gray-700">Current Password</label>
+                                <button 
+                                    type="button" 
+                                    onClick={() => { setIsForgotMode(true); handleSendOtp(); }}
+                                    className="text-xs text-[#D4A398] hover:underline font-medium"
+                                >
+                                    Forgot Password?
+                                </button>
+                            </div>
                             <input
                                 type="password"
                                 value={currentPassword}
@@ -347,11 +422,11 @@ export default function SecurityTab() {
                     
                     <button
                         type="submit"
-                        disabled={updatingPassword || (!user?.hasPassword && !isOtpVerified) || (user?.hasPassword && !currentPassword) || !newPassword || !confirmPassword}
+                        disabled={updatingPassword || (!user?.hasPassword && !isOtpVerified) || (isForgotMode && !isOtpVerified) || (user?.hasPassword && !isForgotMode && !currentPassword) || !newPassword || !confirmPassword}
                         className="mt-2 w-fit px-6 py-2 bg-[#2C2C2C] hover:bg-black text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                         {updatingPassword && <Loader2 size={16} className="animate-spin" />}
-                        {user?.hasPassword ? "Update Password" : "Set Password"}
+                        {(user?.hasPassword && !isForgotMode) ? "Update Password" : "Set Password"}
                     </button>
                 </form>
             </div>
