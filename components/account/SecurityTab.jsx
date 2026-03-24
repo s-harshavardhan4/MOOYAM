@@ -373,7 +373,7 @@ export default function SecurityTab() {
                         </div>
                     ) : (
                         <div>
-                            <div className="flex items-center justify-between mb-1">
+                            <div className="md:w-2/3 flex items-center justify-between mb-1">
                                 <label className="block text-sm font-medium text-gray-700">Current Password</label>
                                 <button 
                                     type="button" 
