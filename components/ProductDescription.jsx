@@ -7,6 +7,7 @@ import { useSelector } from "react-redux"
 import ProductCard from "./ProductCard"
 import { useSession } from "next-auth/react"
 import toast from "react-hot-toast"
+import { fetchFromApi } from "@/lib/api-client"
 
 const ProductDescription = ({ product }) => {
 
@@ -36,30 +37,24 @@ const ProductDescription = ({ product }) => {
 
         setIsSubmitting(true)
         try {
-            const response = await fetch('/api/user/review', {
+            await fetchFromApi('/api/user/review', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+                body: {
                     productId: product.id,
                     rating,
-                    review: reviewText
-                })
+                    review: reviewText,
+                    userId: session.user.id
+                }
             })
 
-            const data = await response.json()
-
-            if (response.ok) {
-                toast.success("Review submitted successfully!")
-                setIsReviewFormOpen(false)
-                setRating(0)
-                setReviewText('')
-                window.location.reload() // Reload to show the new review
-            } else {
-                toast.error(data.message || "Failed to submit review")
-            }
+            toast.success("Review submitted successfully!")
+            setIsReviewFormOpen(false)
+            setRating(0)
+            setReviewText('')
+            window.location.reload() // Reload to show the new review
         } catch (error) {
             console.error("Error submitting review:", error)
-            toast.error("An error occurred while submitting")
+            toast.error(error.message || "An error occurred while submitting")
         } finally {
             setIsSubmitting(false)
         }

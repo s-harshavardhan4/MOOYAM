@@ -4,10 +4,12 @@ import { useState } from "react"
 import { toast } from "react-hot-toast"
 import { useDispatch } from "react-redux"
 import { addAddressAsync } from "@/lib/features/address/addressSlice"
+import { useSession } from "next-auth/react"
 
 const AddressModal = ({ setShowAddressModal }) => {
 
     const dispatch = useDispatch();
+    const { data: session } = useSession();
 
     const [address, setAddress] = useState({
         name: '',
@@ -29,7 +31,11 @@ const AddressModal = ({ setShowAddressModal }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        await dispatch(addAddressAsync(address)).unwrap()
+        if (!session?.user?.id) {
+            toast.error("Please login to add address");
+            return;
+        }
+        await dispatch(addAddressAsync({ addressData: address, userId: session.user.id })).unwrap()
         setShowAddressModal(false)
     }
 

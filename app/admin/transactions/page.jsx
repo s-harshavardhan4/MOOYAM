@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from "react"
 import Loading from "@/components/Loading"
+import { fetchFromApi } from "@/lib/api-client"
 
 export default function AdminTransactions() {
     const [transactions, setTransactions] = useState([])
@@ -8,8 +9,7 @@ export default function AdminTransactions() {
 
     const fetchTransactions = async () => {
         try {
-            const res = await fetch('/api/admin/transactions')
-            const data = await res.json()
+            const data = await fetchFromApi('/api/admin/transactions')
             if (data.success) {
                 setTransactions(data.transactions)
             }

@@ -5,8 +5,9 @@ import { useState } from "react"
 import { toast } from "react-hot-toast"
 import { useSelector } from "react-redux"
 import { PlusIcon, XIcon } from "lucide-react"
-export default function AdminAddProduct() {
+import { fetchFromApi } from "@/lib/api-client"
 
+export default function AdminAddProduct() {
     const products = useSelector(state => state.product.list) || []
 
     const defaultCategories = ['SkinCare', 'HairCare', 'Makeup']
@@ -20,6 +21,7 @@ export default function AdminAddProduct() {
     const [isNewCategory, setIsNewCategory] = useState(false)
     const [isNewSubCategory, setIsNewSubCategory] = useState(false)
 
+    const [loading, setLoading] = useState(false)
     const [images, setImages] = useState({ 1: null, 2: null, 3: null, 4: null })
     const [productInfo, setProductInfo] = useState({
         name: "",
@@ -30,8 +32,6 @@ export default function AdminAddProduct() {
         subCategory: "",
         quantity: 0,
     })
-    const [loading, setLoading] = useState(false)
-
 
     const onChangeHandler = (e) => {
         setProductInfo({ ...productInfo, [e.target.name]: e.target.value })
@@ -42,19 +42,28 @@ export default function AdminAddProduct() {
         setLoading(true)
 
         try {
-            // Note: Since we are not using Cloudinary/S3 yet, we will just send dummy image paths
-            // for the uploaded images so the database insert succeeds without breaking.
-            const dummyImages = [
-                '/products/MOOYAM.jpeg',
-                '/products/acne_serum(1).jpeg'
-            ]
+            // Collect selected image files
+            const selectedFiles = Object.values(images).filter(Boolean)
 
-            const response = await fetch('/api/products', {
+            if (selectedFiles.length === 0) {
+                throw new Error('Please select at least one product image')
+            }
+
+            // Step 1: Upload images to Cloudinary via backend
+            const formData = new FormData()
+            selectedFiles.forEach(file => formData.append('images', file))
+
+            const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
+                body: formData,
+            })
+            const uploadData = await uploadRes.json()
+            if (!uploadData.success) throw new Error(uploadData.message || 'Image upload failed')
+
+            // Step 2: Create product with real Cloudinary image URLs
+            const data = await fetchFromApi('/api/products', {
+                method: 'POST',
+                body: {
                     name: productInfo.name,
                     description: productInfo.description,
                     mrp: parseFloat(productInfo.mrp),
@@ -62,28 +71,23 @@ export default function AdminAddProduct() {
                     category: productInfo.category,
                     subCategory: productInfo.subCategory || undefined,
                     quantity: productInfo.quantity,
-                    images: dummyImages
-                })
+                    images: uploadData.urls   // ✅ real Cloudinary URLs
+                }
             })
 
-            const data = await response.json()
-
-            if (response.ok) {
-                // Reset form on success
-                setProductInfo({ name: "", description: "", mrp: 0, price: 0, category: "", subCategory: "", quantity: 0 })
-                setImages({ 1: null, 2: null, 3: null, 4: null })
-                return Promise.resolve(data)
-            } else {
-                throw new Error(data.message || 'Error adding product')
-            }
+            // Reset form on success
+            setProductInfo({ name: "", description: "", mrp: 0, price: 0, category: "", subCategory: "", quantity: 0 })
+            setImages({ 1: null, 2: null, 3: null, 4: null })
+            return data
 
         } catch (error) {
             console.error('Submit Error:', error)
-            return Promise.reject(error)
+            throw error
         } finally {
             setLoading(false)
         }
     }
+
 
 
     return (

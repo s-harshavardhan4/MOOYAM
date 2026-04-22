@@ -2,7 +2,9 @@
 import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
 import Image from "next/image"
+import { fetchFromApi } from "@/lib/api-client"
 import Loading from "@/components/Loading"
+import { Trash2 } from "lucide-react"
 
 export default function AdminManageProducts() {
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '₹'
@@ -11,8 +13,7 @@ export default function AdminManageProducts() {
 
     const fetchProducts = async () => {
         try {
-            const res = await fetch('/api/admin/products/stats')
-            const data = await res.json()
+            const data = await fetchFromApi('/api/admin/products/stats')
             if (data.success) {
                 setProducts(data.products)
             }
@@ -25,14 +26,11 @@ export default function AdminManageProducts() {
 
     const updateProduct = async (id, updates) => {
         try {
-            const res = await fetch('/api/products', {
+            const data = await fetchFromApi('/api/products', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, ...updates })
+                body: { id, ...updates }
             })
-            const data = await res.json()
-            if (!data.success) throw new Error(data.message)
-            return true
+            return data.success
         } catch (error) {
             console.error('Failed to update product', error)
             return false
@@ -94,6 +92,28 @@ export default function AdminManageProducts() {
         }
     }
 
+    const handleDeleteProduct = async (id, name) => {
+        if (!window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const data = await fetchFromApi(`/api/products/${id}`, {
+                method: 'DELETE'
+            })
+
+            if (data.success) {
+                setProducts(products.filter(p => p.id !== id))
+                toast.success("Product deleted successfully")
+            } else {
+                toast.error(data.message || "Failed to delete product")
+            }
+        } catch (error) {
+            console.error("Delete error:", error)
+            toast.error("An error occurred while deleting the product")
+        }
+    }
+
     useEffect(() => {
         fetchProducts()
     }, [])
@@ -113,6 +133,7 @@ export default function AdminManageProducts() {
                             <th className="px-4 py-3">Quantity</th>
                             <th className="px-4 py-3">Performance</th>
                             <th className="px-4 py-3">Visible</th>
+                            <th className="px-4 py-3">Delete</th>
                         </tr>
                     </thead>
                     <tbody className="text-slate-700">
@@ -193,6 +214,15 @@ export default function AdminManageProducts() {
                                         <div className="w-9 h-5 bg-slate-300 rounded-full peer peer-checked:bg-green-600 transition-colors duration-200"></div>
                                         <span className="dot absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-4"></span>
                                     </label>
+                                </td>
+                                <td className="px-4 py-3">
+                                    <button
+                                        onClick={() => handleDeleteProduct(product.id, product.name)}
+                                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Delete product"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
                                 </td>
                             </tr>
                         )})}

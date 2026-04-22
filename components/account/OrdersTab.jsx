@@ -5,20 +5,23 @@ import { Download, MoreVertical, Package } from "lucide-react";
 import { useSelector } from "react-redux";
 import { productDummyData } from "@/assets/assets";
 import Loading from "@/components/Loading";
+import { fetchFromApi } from "@/lib/api-client";
+import { useSession } from "next-auth/react";
 
 export default function OrdersTab() {
+    const { data: session } = useSession();
     const globalProducts = useSelector(state => state.product.list);
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState('current'); // 'current', 'unpaid', 'all'
+    const [filter, setFilter] = useState('all'); // 'paid', 'unpaid', 'all'
 
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '₹';
 
     const fetchOrders = async () => {
+        if (!session?.user?.id) return;
         try {
-            const res = await fetch('/api/orders');
-            const data = await res.json();
-
+            const data = await fetchFromApi(`/api/orders?userId=${session.user.id}`);
+            
             if (data.success) {
                 const populatedOrders = data.orders.map(order => {
                     const mappedItems = order.orderItems.map(item => {
@@ -40,8 +43,10 @@ export default function OrdersTab() {
     };
 
     useEffect(() => {
-        fetchOrders();
-    }, []);
+        if (session?.user?.id) {
+            fetchOrders();
+        }
+    }, [session]);
 
     const formatDate = (dateString) => {
         const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
@@ -72,10 +77,10 @@ export default function OrdersTab() {
             {/* Header Tabs (Static for now to match UI) */}
             <div className="flex gap-2 mb-8 border-b border-gray-100 pb-4">
                 <button
-                    onClick={() => setFilter('current')}
-                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'current' ? 'bg-gray-100 text-gray-800' : 'text-gray-500 hover:bg-gray-50'}`}
+                    onClick={() => setFilter('paid')}
+                    className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'paid' ? 'bg-gray-100 text-gray-800' : 'text-gray-500 hover:bg-gray-50'}`}
                 >
-                    Current
+                    Paid
                 </button>
                 <button
                     onClick={() => setFilter('unpaid')}
@@ -94,8 +99,8 @@ export default function OrdersTab() {
             {/* Orders List */}
             <div className="flex flex-col gap-6">
                 {orders.filter(order => {
+                    if (filter === 'paid') return order.isPaid === true;
                     if (filter === 'unpaid') return order.isPaid === false;
-                    if (filter === 'current') return order.status !== 'DELIVERED';
                     return true; // 'all'
                 }).map((order) => (
                     <div key={order.id} className="border border-gray-200 rounded-xl bg-white overflow-hidden">
@@ -105,7 +110,7 @@ export default function OrdersTab() {
                             <div>
                                 <h3 className="text-lg font-bold text-gray-900 mb-0.5">Order #: {order.id.slice(-6).toUpperCase()}</h3>
                                 <p className="text-xs text-gray-500">
-                                    {order.orderItems.length} Products | By {order.address.name} | {formatTimeDateInfo(order.createdAt)}
+                                    {order.orderItems.length} Products | By {order.address?.name || 'Customer'} | {formatTimeDateInfo(order.createdAt)}
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -144,7 +149,7 @@ export default function OrdersTab() {
                                 <div className="md:col-span-2">
                                     <p className="text-gray-500 mb-1">Delivered to:</p>
                                     <p className="font-medium text-gray-900 truncate">
-                                        {order.address.street}, {order.address.city} {order.address.state}, {order.address.zip}
+                                        {order.address ? `${order.address.street || ''}, ${order.address.city || ''} ${order.address.state || ''}, ${order.address.zip || ''}` : 'Address not available'}
                                     </p>
                                 </div>
                                 <div className="lg:col-span-4 mt-2 flex flex-col sm:flex-row gap-4 sm:gap-12">

@@ -6,6 +6,8 @@ import { CircleDollarSignIcon, ShoppingBasketIcon, StarIcon, TagsIcon } from "lu
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { fetchFromApi } from "@/lib/api-client"
+
 
 export default function AdminDashboard() {
 
@@ -30,12 +32,31 @@ export default function AdminDashboard() {
     ]
 
     const fetchDashboardData = async () => {
-        // Merge data for single store view
-        setDashboardData({
-            ...dummyAdminDashboardData,
-            ratings: dummyStoreDashboardData.ratings
-        })
-        setLoading(false)
+        try {
+            const data = await fetchFromApi('/api/admin/products/stats')
+            if (data.success) {
+                // Fetch orders for revenue/count if not included in stats
+                const ordersData = await fetchFromApi('/api/admin/orders')
+                
+                setDashboardData({
+                    products: data.products.length,
+                    revenue: ordersData.orders?.reduce((acc, o) => acc + (o.isPaid ? o.total : 0), 0) || 0,
+                    orders: ordersData.orders?.length || 0,
+                    stores: 1, 
+                    allOrders: ordersData.orders || [],
+                    ratings: data.latestReviews || data.products.flatMap(p => p.rating || [])
+                })
+            }
+        } catch (error) {
+            console.error('Failed to fetch dashboard data:', error)
+            // Fallback to dummy data on error
+            setDashboardData({
+                ...dummyAdminDashboardData,
+                ratings: dummyStoreDashboardData.ratings
+            })
+        } finally {
+            setLoading(false)
+        }
     }
 
     useEffect(() => {

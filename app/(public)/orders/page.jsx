@@ -3,17 +3,29 @@ import PageTitle from "@/components/PageTitle"
 import { useEffect, useState } from "react";
 import OrderItem from "@/components/OrderItem";
 import { productDummyData } from "@/assets/assets";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { useSearchParams, useRouter } from "next/navigation";
+import { clearCart } from "@/lib/features/cart/cartSlice";
+import toast from "react-hot-toast";
+
+import { fetchFromApi } from "@/lib/api-client";
+import { useSession } from "next-auth/react";
 
 export default function Orders() {
+    const { data: session } = useSession();
+    const dispatch = useDispatch();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const success = searchParams.get('success');
+
     const globalProducts = useSelector(state => state.product.list)
 
     const [orders, setOrders] = useState([]);
 
     const fetchOrders = async () => {
+        if (!session?.user?.id) return;
         try {
-            const res = await fetch('/api/orders')
-            const data = await res.json()
+            const data = await fetchFromApi(`/api/orders?userId=${session.user.id}`)
 
             if (data.success) {
                 // Map the static product info from assets.js onto the fetched orderItems
@@ -35,8 +47,15 @@ export default function Orders() {
     }
 
     useEffect(() => {
-        fetchOrders()
-    }, []);
+        if (session?.user?.id) {
+            fetchOrders()
+        }
+        if (success === 'true') {
+            dispatch(clearCart());
+            toast.success("Your order has been placed!");
+            router.replace('/orders');
+        }
+    }, [success, dispatch, session, router]);
 
     return (
         <div className="min-h-[70vh] mx-6">

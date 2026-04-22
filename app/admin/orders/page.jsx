@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import Loading from "@/components/Loading"
 import { productDummyData } from "@/assets/assets"
 import { useSelector } from "react-redux"
+import { fetchFromApi } from "@/lib/api-client"
 
 export default function AdminOrders() {
     const [orders, setOrders] = useState([])
@@ -11,11 +12,9 @@ export default function AdminOrders() {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const globalProducts = useSelector(state => state.product.list)
 
-
     const fetchOrders = async () => {
         try {
-            const res = await fetch('/api/admin/orders')
-            const data = await res.json()
+            const data = await fetchFromApi('/api/admin/orders')
             if (data.success) {
                 // Map the static product info from assets.js onto the fetched orderItems
                 const populatedOrders = data.orders.map(order => {
@@ -39,12 +38,10 @@ export default function AdminOrders() {
 
     const updateOrderStatus = async (orderId, status) => {
         try {
-            const res = await fetch('/api/admin/orders', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+            const data = await fetchFromApi('/api/admin/orders', {
+                method: 'POST',
                 body: JSON.stringify({ orderId, status })
             })
-            const data = await res.json()
             if (data.success) {
                 setOrders(prevOrders =>
                     prevOrders.map(o => o.id === orderId ? { 
@@ -61,12 +58,10 @@ export default function AdminOrders() {
 
     const updateOrderPayment = async (orderId, isPaid) => {
         try {
-            const res = await fetch('/api/admin/orders', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+            const data = await fetchFromApi('/api/admin/orders', {
+                method: 'POST',
                 body: JSON.stringify({ orderId, isPaid })
             })
-            const data = await res.json()
             if (data.success) {
                 setOrders(prevOrders =>
                     prevOrders.map(o => o.id === orderId ? { ...o, isPaid } : o)

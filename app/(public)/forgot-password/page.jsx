@@ -6,6 +6,18 @@ import { Mail, Lock, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 
+// OTP routes live in Next.js, so use plain fetch (not fetchFromApi which targets Express)
+async function callLocalApi(endpoint, body) {
+    const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Something went wrong');
+    return data;
+}
+
 export default function ForgotPasswordPage() {
     const router = useRouter();
     const [step, setStep] = useState(1);
@@ -21,24 +33,9 @@ export default function ForgotPasswordPage() {
         setIsLoading(true);
 
         try {
-            const res = await fetch('/api/auth/send-otp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: formData.email })
-            });
- 
-            const data = await res.json();
- 
-            if (!res.ok) {
-                throw new Error(data.message || 'Failed to send OTP');
-            }
- 
-            if (data.devOtp) {
-                // Remove dev-only toast to match production behavior as requested
-                toast.success('OTP sent to your email');
-            } else {
-                toast.success('OTP sent to your email');
-            }
+            const data = await callLocalApi('/api/auth/send-otp', { email: formData.email });
+
+            toast.success(data.message || 'OTP sent to your email');
             setStep(2);
         } catch (error) {
             toast.error(error.message);
@@ -61,36 +58,17 @@ export default function ForgotPasswordPage() {
             }
 
             // 1. Verify OTP first
-            const verifyRes = await fetch('/api/auth/verify-otp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: formData.email,
-                    otp: formData.otp
-                })
+            await callLocalApi('/api/auth/verify-otp', {
+                email: formData.email,
+                otp: formData.otp
             });
-
-            const verifyData = await verifyRes.json();
-            if (!verifyRes.ok) {
-                throw new Error(verifyData.message || 'Invalid OTP');
-            }
 
             // 2. Reset Password
-            const resetRes = await fetch('/api/auth/reset-password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: formData.email,
-                    otp: formData.otp,
-                    newPassword: formData.newPassword
-                })
+            await callLocalApi('/api/auth/reset-password', {
+                email: formData.email,
+                otp: formData.otp,
+                newPassword: formData.newPassword
             });
-
-            const resetData = await resetRes.json();
-
-            if (!resetRes.ok) {
-                throw new Error(resetData.message || 'Failed to reset password');
-            }
 
             toast.success('Password reset successfully');
             router.push('/login');

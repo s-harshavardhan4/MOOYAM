@@ -4,6 +4,19 @@ import { User, Lock, AlertTriangle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { signOut, useSession } from "next-auth/react";
 import Loading from "@/components/Loading";
+import { fetchFromApi } from "@/lib/api-client";
+
+// OTP & Auth routes live in Next.js — use plain fetch, not fetchFromApi (which targets Express)
+async function callLocalApi(endpoint, body) {
+    const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Something went wrong');
+    return data;
+}
 
 export default function SecurityTab() {
     const { data: session, update } = useSession();
@@ -32,13 +45,11 @@ export default function SecurityTab() {
 
     useEffect(() => {
         const fetchProfile = async () => {
+            if (!session?.user?.id) return;
             try {
-                const res = await fetch('/api/user/profile');
-                const data = await res.json();
-                if (data.success) {
-                    setUser(data.user);
-                    setName(data.user.name);
-                }
+                const data = await fetchFromApi(`/api/user/profile?userId=${session.user.id}`);
+                setUser(data.user);
+                setName(data.user.name);
             } catch (error) {
                 console.error(error);
             } finally {
@@ -46,7 +57,7 @@ export default function SecurityTab() {
             }
         };
         fetchProfile();
-    }, []);
+    }, [session]);
 
     const handleUpdateName = async (e) => {
         e.preventDefault();
@@ -54,21 +65,15 @@ export default function SecurityTab() {
 
         setUpdatingName(true);
         try {
-            const res = await fetch('/api/user/profile', {
+            const data = await fetchFromApi('/api/user/profile', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
+                body: { name, userId: session.user.id }
             });
-            const data = await res.json();
 
-            if (data.success) {
-                toast.success("Profile updated successfully");
-                update({ name: data.user.name }); // Update NextAuth session
-            } else {
-                toast.error(data.message || "Failed to update profile");
-            }
+            toast.success("Profile updated successfully");
+            update({ name: data.user.name }); // Update NextAuth session
         } catch (error) {
-            toast.error("An error occurred");
+            toast.error(error.message || "An error occurred");
         } finally {
             setUpdatingName(false);
         }
@@ -77,21 +82,12 @@ export default function SecurityTab() {
     const handleSendOtp = async () => {
         setSendingOtp(true);
         try {
-            const res = await fetch('/api/auth/send-otp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: user.email })
-            });
-            const data = await res.json();
-            if (data.success) {
-                setOtpSent(true);
-                setShowOtpField(true);
-                toast.success("OTP sent to your email");
-            } else {
-                toast.error(data.message || "Failed to send OTP");
-            }
+            await callLocalApi('/api/auth/send-otp', { email: user.email });
+            setOtpSent(true);
+            setShowOtpField(true);
+            toast.success("OTP sent to your email");
         } catch (error) {
-            toast.error("Error sending OTP");
+            toast.error(error.message || "Error sending OTP");
         } finally {
             setSendingOtp(false);
         }
@@ -102,20 +98,11 @@ export default function SecurityTab() {
         
         setVerifyingOtp(true);
         try {
-            const res = await fetch('/api/auth/verify-otp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: user.email, otp })
-            });
-            const data = await res.json();
-            if (data.success) {
-                setIsOtpVerified(true);
-                toast.success("Email verified! You can now set your password.");
-            } else {
-                toast.error(data.message || "Invalid OTP");
-            }
+            await callLocalApi('/api/auth/verify-otp', { email: user.email, otp });
+            setIsOtpVerified(true);
+            toast.success("Email verified! You can now set your password.");
         } catch (error) {
-            toast.error("Error verifying OTP");
+            toast.error(error.message || "Error verifying OTP");
         } finally {
             setVerifyingOtp(false);
         }
@@ -139,42 +126,36 @@ export default function SecurityTab() {
 
         setUpdatingPassword(true);
         try {
-            // Updated logic: Step 1 handled by handleVerifyOtp
-            
-            // Step 2: Reset/Set Password
             const isResetFlow = !user?.hasPassword || isForgotMode;
-            const endpoint = isResetFlow ? '/api/auth/reset-password' : '/api/user/profile';
-            const method = isResetFlow ? 'POST' : 'PATCH';
-            const body = isResetFlow 
-                ? { email: user.email, otp, newPassword }
-                : { currentPassword, newPassword };
-
-            const res = await fetch(endpoint, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                toast.success(isResetFlow ? "Password reset successfully" : "Password updated successfully");
-                setCurrentPassword("");
-                setNewPassword("");
-                setConfirmPassword("");
-                setOtp("");
-                setShowOtpField(false);
-                setOtpSent(false);
-                setIsOtpVerified(false);
-                setIsForgotMode(false);
-                
-                // Refresh user state to show they now have a password
-                const refreshRes = await fetch('/api/user/profile');
-                const refreshData = await refreshRes.json();
-                if (refreshData.success) setUser(refreshData.user);
-
+            if (isResetFlow) {
+                // Use local Next.js route for password reset (uses OTP)
+                await callLocalApi('/api/auth/reset-password', {
+                    email: user.email,
+                    otp,
+                    newPassword
+                });
             } else {
-                toast.error(data.message || "Failed to update password");
+                // Use Express backend for password change (uses current password)
+                await fetchFromApi('/api/user/profile', {
+                    method: 'PATCH',
+                    body: { currentPassword, newPassword, userId: session.user.id }
+                });
             }
+
+            toast.success(isResetFlow ? "Password reset successfully" : "Password updated successfully");
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+            setOtp("");
+            setShowOtpField(false);
+            setOtpSent(false);
+            setIsOtpVerified(false);
+            setIsForgotMode(false);
+            
+            // Refresh user state
+            const refreshData = await fetchFromApi(`/api/user/profile?userId=${session.user.id}`);
+            setUser(refreshData.user);
+
         } catch (error) {
             toast.error(error.message || "An error occurred");
         } finally {
@@ -187,20 +168,13 @@ export default function SecurityTab() {
 
         setDeletingAccount(true);
         try {
-            const res = await fetch('/api/user/profile', {
+            await fetchFromApi(`/api/user/profile?userId=${session.user.id}`, {
                 method: 'DELETE'
             });
-            const data = await res.json();
-
-            if (data.success) {
-                toast.success("Account deleted");
-                signOut({ callbackUrl: '/' });
-            } else {
-                toast.error(data.message || "Failed to delete account");
-                setDeletingAccount(false);
-            }
+            toast.success("Account deleted");
+            signOut({ callbackUrl: '/' });
         } catch (error) {
-            toast.error("An error occurred");
+            toast.error(error.message || "An error occurred");
             setDeletingAccount(false);
         }
     };
@@ -393,7 +367,7 @@ export default function SecurityTab() {
                         </div>
                     )}
                     
-                    {(user?.hasPassword || isOtpVerified) && (
+                    {((user?.hasPassword && !isForgotMode) || isOtpVerified) && (
                         <>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>

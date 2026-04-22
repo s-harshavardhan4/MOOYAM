@@ -7,12 +7,15 @@ import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { fetchAddressesAsync } from '@/lib/features/address/addressSlice';
 import { clearCart } from '@/lib/features/cart/cartSlice';
+import { fetchFromApi } from '@/lib/api-client';
+import { useSession } from 'next-auth/react';
 
 const OrderSummary = ({ totalPrice, items }) => {
 
     const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '₹';
     const router = useRouter();
     const dispatch = useDispatch();
+    const { data: session } = useSession();
 
     const addressList = useSelector(state => state.address.list);
 
@@ -23,8 +26,10 @@ const OrderSummary = ({ totalPrice, items }) => {
     const [coupon, setCoupon] = useState('');
 
     useEffect(() => {
-        dispatch(fetchAddressesAsync());
-    }, [dispatch]);
+        if (session?.user?.id) {
+            dispatch(fetchAddressesAsync(session.user.id));
+        }
+    }, [dispatch, session]);
 
     const handleCouponCode = async (event) => {
         event.preventDefault();
@@ -32,12 +37,7 @@ const OrderSummary = ({ totalPrice, items }) => {
             throw new Error('Please enter a coupon code');
         }
         
-        const res = await fetch(`/api/coupon?code=${couponCodeInput}`);
-        const data = await res.json();
-        
-        if (!data.success) {
-            throw new Error(data.message || 'Invalid coupon code');
-        }
+        const data = await fetchFromApi(`/api/coupon?code=${couponCodeInput}&userId=${session?.user?.id}`);
         
         setCoupon(data.coupon);
         setCouponCodeInput('');
@@ -46,6 +46,7 @@ const OrderSummary = ({ totalPrice, items }) => {
     const handlePlaceOrder = async (e) => {
         e.preventDefault();
         try {
+            if (!session?.user?.id) throw new Error("Please login to place order");
             if (!selectedAddress) throw new Error("Please select an address");
 
             const orderData = {
@@ -53,21 +54,29 @@ const OrderSummary = ({ totalPrice, items }) => {
                 total: coupon ? totalPrice - (coupon.discount / 100 * totalPrice) : totalPrice,
                 addressId: selectedAddress.id,
                 paymentMethod,
-                coupon: coupon || undefined
+                coupon: coupon || undefined,
+                userId: session.user.id
             };
 
-            const response = await fetch('/api/orders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(orderData)
-            });
+            if (paymentMethod === 'STRIPE') {
+                const data = await fetchFromApi('/api/checkout', {
+                    method: 'POST',
+                    body: orderData
+                });
 
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.message || "Failed to place order");
+                // Redirect to Stripe Checkout Session
+                window.location.href = data.url;
+                return Promise.resolve(data);
+            } else {
+                const data = await fetchFromApi('/api/orders', {
+                    method: 'POST',
+                    body: orderData
+                });
 
-            dispatch(clearCart());
-            router.push('/orders');
-            return Promise.resolve(data);
+                dispatch(clearCart());
+                router.push('/orders');
+                return Promise.resolve(data);
+            }
         } catch (error) {
             return Promise.reject(error);
         }
@@ -144,7 +153,11 @@ const OrderSummary = ({ totalPrice, items }) => {
                 <p>Total:</p>
                 <p className='font-medium text-right'>{currency}{coupon ? (totalPrice - (coupon.discount / 100 * totalPrice)).toFixed(2) : totalPrice.toLocaleString()}</p>
             </div>
-            <button onClick={e => toast.promise(handlePlaceOrder(e), { loading: 'placing Order...' })} className='w-full bg-slate-700 text-white py-2.5 rounded hover:bg-slate-900 active:scale-95 transition-all'>Place Order</button>
+            <button onClick={e => toast.promise(handlePlaceOrder(e), { 
+                loading: 'Placing Order...',
+                success: 'Your order has been placed!',
+                error: (err) => err.message 
+            })} className='w-full bg-slate-700 text-white py-2.5 rounded hover:bg-slate-900 active:scale-95 transition-all'>Place Order</button>
 
             {showAddressModal && <AddressModal setShowAddressModal={setShowAddressModal} />}
 

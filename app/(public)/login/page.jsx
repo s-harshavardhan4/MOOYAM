@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
-import { signIn, useSession } from 'next-auth/react';
+import { signIn, useSession, getSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 
 function LoginForm() {
@@ -19,12 +19,16 @@ function LoginForm() {
         password: ''
     });
 
-    // If already logged in, redirect
+    // If already logged in, redirect — admin goes to /admin, users go to callbackUrl
     useEffect(() => {
         if (status === 'authenticated') {
-            router.push(callbackUrl);
+            if (session?.user?.isAdmin) {
+                router.push('/admin');
+            } else {
+                router.push(callbackUrl);
+            }
         }
-    }, [status, router, callbackUrl]);
+    }, [status, session, router, callbackUrl]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -47,8 +51,13 @@ function LoginForm() {
             }
 
             toast.success('Successfully signed in!');
-            router.push(callbackUrl);
-            router.refresh();
+            // Get the fresh session immediately to check isAdmin
+            const updatedSession = await getSession();
+            if (updatedSession?.user?.isAdmin) {
+                router.push('/admin');
+            } else {
+                router.push(callbackUrl);
+            }
 
         } catch (error) {
             toast.error('An unexpected error occurred. Please try again.');

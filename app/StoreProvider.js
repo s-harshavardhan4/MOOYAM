@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { makeStore } from '../lib/store'
 import { setProduct } from '@/lib/features/product/productSlice'
 import { fetchWishlistAsync } from '@/lib/features/wishlist/wishlistSlice'
+import { fetchFromApi } from '@/lib/api-client'
 
 export default function StoreProvider({ children }) {
   const storeRef = useRef(undefined)
@@ -15,8 +16,7 @@ export default function StoreProvider({ children }) {
   }
 
   useEffect(() => {
-    fetch('/api/products')
-      .then(res => res.json())
+    fetchFromApi('/api/products')
       .then(data => {
         if (data.success) {
           storeRef.current.dispatch(setProduct(data.products))
@@ -26,8 +26,8 @@ export default function StoreProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    if (session?.user) {
-      storeRef.current.dispatch(fetchWishlistAsync())
+    if (session?.user?.id) {
+      storeRef.current.dispatch(fetchWishlistAsync(session.user.id))
     }
   }, [session])
 

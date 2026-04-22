@@ -33,7 +33,10 @@ const ProductDetails = ({ product }) => {
         }
 
         try {
-            const action = await dispatch(toggleWishlistAsync(productId)).unwrap();
+            const action = await dispatch(toggleWishlistAsync({ 
+                productId, 
+                userId: session.user.id 
+            })).unwrap();
             toast.success(action.isSaved ? "Saved to Wishlist" : "Removed from Wishlist");
         } catch (error) {
             toast.error(error || "Failed to save item");

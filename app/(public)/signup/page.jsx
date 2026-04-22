@@ -7,6 +7,8 @@ import { Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 import toast from 'react-hot-toast';
 
+// Registration route lives in Next.js, so use plain fetch (not fetchFromApi which targets Express)
+
 export default function SignupPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
@@ -43,12 +45,8 @@ export default function SignupPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
             });
-
             const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.message || 'Something went wrong');
-            }
+            if (!res.ok) throw new Error(data.message || 'Registration failed');
 
             toast.success('Account created successfully! Please sign in.');
             router.push('/login');

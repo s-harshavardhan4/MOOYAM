@@ -29,7 +29,10 @@ const ProductCard = ({ product, className = "" }) => {
         }
 
         try {
-            const action = await dispatch(toggleWishlistAsync(product.id)).unwrap();
+            const action = await dispatch(toggleWishlistAsync({ 
+                productId: product.id, 
+                userId: session.user.id 
+            })).unwrap();
             toast.success(action.isSaved ? "Saved to Wishlist" : "Removed from Wishlist");
         } catch (error) {
             toast.error(error || "Failed to save item");

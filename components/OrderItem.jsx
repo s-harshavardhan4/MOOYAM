@@ -30,13 +30,13 @@ const OrderItem = ({ order }) => {
                                     />
                                 </div>
                                 <div className="flex flex-col justify-center text-sm">
-                                    <p className="font-medium text-slate-600 text-base">{item.product.name}</p>
+                                    <p className="font-medium text-slate-600 text-base">{item.product?.name || 'Unknown Product'}</p>
                                     <p>{currency}{item.price} Qty : {item.quantity} </p>
                                     <p className="mb-1">{new Date(order.createdAt).toDateString()}</p>
                                     <div>
-                                        {ratings.find(rating => order.id === rating.orderId && item.product.id === rating.productId)
-                                            ? <Rating value={ratings.find(rating => order.id === rating.orderId && item.product.id === rating.productId).rating} />
-                                            : <button onClick={() => setRatingModal({ orderId: order.id, productId: item.product.id })} className={`text-green-500 hover:bg-green-50 transition ${order.status !== "DELIVERED" && 'hidden'}`}>Rate Product</button>
+                                        {ratings.find(rating => order.id === rating.orderId && item.product?.id === rating.productId)
+                                            ? <Rating value={ratings.find(rating => order.id === rating.orderId && item.product?.id === rating.productId).rating} />
+                                            : <button onClick={() => setRatingModal({ orderId: order.id, productId: item.product?.id })} className={`text-green-500 hover:bg-green-50 transition ${order.status !== "DELIVERED" && 'hidden'}`}>Rate Product</button>
                                         }</div>
                                     {ratingModal && <RatingModal ratingModal={ratingModal} setRatingModal={setRatingModal} />}
                                 </div>
@@ -48,9 +48,15 @@ const OrderItem = ({ order }) => {
                 <td className="text-center max-md:hidden">{currency}{order.total}</td>
 
                 <td className="text-left max-md:hidden">
-                    <p>{order.address.name}, {order.address.street},</p>
-                    <p>{order.address.city}, {order.address.state}, {order.address.zip}, {order.address.country},</p>
-                    <p>{order.address.phone}</p>
+                    {order.address ? (
+                        <>
+                            <p>{order.address.name}, {order.address.street},</p>
+                            <p>{order.address.city}, {order.address.state}, {order.address.zip}, {order.address.country},</p>
+                            <p>{order.address.phone}</p>
+                        </>
+                    ) : (
+                        <p className="text-gray-400 italic">Address not available</p>
+                    )}
                 </td>
 
                 <td className="text-left space-y-2 text-sm max-md:hidden">
@@ -70,9 +76,15 @@ const OrderItem = ({ order }) => {
             {/* Mobile */}
             <tr className="md:hidden">
                 <td colSpan={5}>
-                    <p>{order.address.name}, {order.address.street}</p>
-                    <p>{order.address.city}, {order.address.state}, {order.address.zip}, {order.address.country}</p>
-                    <p>{order.address.phone}</p>
+                    {order.address ? (
+                        <>
+                            <p>{order.address.name}, {order.address.street}</p>
+                            <p>{order.address.city}, {order.address.state}, {order.address.zip}, {order.address.country}</p>
+                            <p>{order.address.phone}</p>
+                        </>
+                    ) : (
+                        <p className="text-gray-400 italic">Address not available</p>
+                    )}
                     <br />
                     <div className="flex items-center">
                         <span className='text-center mx-auto px-6 py-1.5 rounded bg-green-100 text-green-700' >
