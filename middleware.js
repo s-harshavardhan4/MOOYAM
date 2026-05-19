@@ -21,23 +21,15 @@ export async function middleware(req) {
 
     // If user is logged in
     if (token) {
-        // Admin Routing Logic
-        if (token.isAdmin) {
-            // Admin MUST stay within /admin routes
-            if (!isAdminRoute) {
-                return NextResponse.redirect(new URL("/admin", req.url));
-            }
+        // Block normal users from accessing admin routes
+        if (!token.isAdmin && isAdminRoute) {
+            return NextResponse.redirect(new URL("/", req.url));
         }
-        // User Routing Logic
-        else {
-            if (isAdminRoute) {
-                return NextResponse.redirect(new URL("/", req.url));
-            }
-            if (isAuthRoute) {
-                // Preserve callbackUrl if user is already logged in
-                const callbackUrl = req.nextUrl.searchParams.get("callbackUrl") || "/";
-                return NextResponse.redirect(new URL(callbackUrl, req.url));
-            }
+        
+        // Block logged in users (admin or normal) from viewing login/signup
+        if (isAuthRoute) {
+            const callbackUrl = req.nextUrl.searchParams.get("callbackUrl") || "/";
+            return NextResponse.redirect(new URL(callbackUrl, req.url));
         }
     }
     // If user is NOT logged in

@@ -65,6 +65,11 @@ const Navbar = () => {
 
                             {session ? (
                                 <div className="flex items-center gap-3">
+                                    {session.user?.isAdmin && (
+                                        <Link href="/admin" className="text-sm font-semibold text-[#D4A398] hover:text-[#2C2C2C] border border-[#D4A398]/40 px-4 py-1.5 rounded-full hover:bg-pink-50 transition-all font-sans tracking-wide mr-2 shadow-xs">
+                                            Admin Panel
+                                        </Link>
+                                    )}
                                     <Link href="/account" className="flex items-center gap-1.5 text-sm font-medium text-gray-600 truncate max-w-[150px] hover:text-[#D4A398] transition-colors group">
                                         <User size={16} className="text-[#D4A398] group-hover:scale-110 transition-transform" />
                                         Hi, {session.user?.name?.split(' ')[0]}
@@ -130,14 +135,21 @@ const Navbar = () => {
 
                             <div className="pt-2 border-t border-gray-100">
                                 {session ? (
-                                    <div className="flex items-center justify-between">
-                                        <Link href="/account" onClick={closeMobileMenu} className="flex items-center gap-2 text-sm font-medium text-gray-600">
-                                            <User size={18} className="text-[#D4A398]" />
-                                            Hi, {session.user?.name?.split(' ')[0]}
-                                        </Link>
-                                        <button onClick={handleSignOut} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600 hover:text-red-500">
-                                            <LogOut size={18} />
-                                        </button>
+                                    <div className="flex flex-col gap-3">
+                                        {session.user?.isAdmin && (
+                                            <Link href="/admin" onClick={closeMobileMenu} className="flex items-center gap-2 text-sm font-semibold text-[#D4A398] hover:text-[#2C2C2C] border border-[#D4A398]/30 px-4 py-2 rounded-full hover:bg-pink-50 transition-colors w-fit shadow-xs">
+                                                Admin Panel
+                                            </Link>
+                                        )}
+                                        <div className="flex items-center justify-between pt-1">
+                                            <Link href="/account" onClick={closeMobileMenu} className="flex items-center gap-2 text-sm font-medium text-gray-600">
+                                                <User size={18} className="text-[#D4A398]" />
+                                                Hi, {session.user?.name?.split(' ')[0]}
+                                            </Link>
+                                            <button onClick={handleSignOut} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600 hover:text-red-500">
+                                                <LogOut size={18} />
+                                            </button>
+                                        </div>
                                     </div>
                                 ) : (
                                     <Link href="/login" onClick={closeMobileMenu} className="block w-full text-center px-6 py-2.5 bg-[#D4A398] text-white rounded-full font-medium">

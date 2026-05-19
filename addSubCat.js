@@ -1,4 +1,4 @@
-const fs = require('fs');
+import fs from 'fs';
 let content = fs.readFileSync('d:/ECOMMERWEBSITE_Cream/assets/assets.js', 'utf8');
 
 // Add subCategory right after category field

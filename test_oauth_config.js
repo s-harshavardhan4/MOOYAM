@@ -3,7 +3,8 @@
  * Run this to verify your OAuth setup before starting the dev server
  */
 
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
 console.log('\n🔍 Testing OAuth Configuration...\n');
 
@@ -36,7 +37,7 @@ checkEnv('DATABASE_URL', process.env.DATABASE_URL);
 checkEnv('NEXTAUTH_SECRET', process.env.NEXTAUTH_SECRET);
 checkEnv('NEXTAUTH_URL', process.env.NEXTAUTH_URL);
 checkEnv('ADMIN_EMAIL', process.env.ADMIN_EMAIL);
-checkEnv('ADMIN_PASSWORD_HASH', process.env.ADMIN_PASSWORD_HASH);
+checkEnv('ADMIN_PASSWORD', process.env.ADMIN_PASSWORD);
 
 console.log('\n🔐 OAuth Providers:\n');
 
