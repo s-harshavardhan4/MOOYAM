@@ -2,16 +2,28 @@
 import { useEffect, useState } from "react"
 import Loading from "@/components/Loading"
 import { fetchFromApi } from "@/lib/api-client"
+import { useSelector } from "react-redux"
 
 export default function AdminTransactions() {
     const [transactions, setTransactions] = useState([])
     const [loading, setLoading] = useState(true)
+    const globalProducts = useSelector(state => state.product.list)
 
     const fetchTransactions = async () => {
         try {
             const data = await fetchFromApi('/api/admin/transactions')
             if (data.success) {
-                setTransactions(data.transactions)
+                const populatedTxns = data.transactions.map(txn => {
+                    const mappedItems = (txn.orderItems || []).map(item => {
+                        const productInfo = globalProducts.find(p => p.id === item.productId)
+                        return {
+                            ...item,
+                            product: productInfo || item.product || { name: 'Unknown Product' }
+                        }
+                    })
+                    return { ...txn, orderItems: mappedItems }
+                })
+                setTransactions(populatedTxns)
             }
         } catch (error) {
             console.error(error)
@@ -32,11 +44,11 @@ export default function AdminTransactions() {
             {transactions.length === 0 ? (
                 <p>No transactions found.</p>
             ) : (
-                <div className="overflow-x-auto max-w-5xl rounded-md shadow border border-gray-200">
+                <div className="overflow-x-auto max-w-6xl rounded-md shadow border border-gray-200">
                     <table className="w-full text-sm text-left text-gray-600">
                         <thead className="bg-gray-50 text-gray-700 text-xs uppercase tracking-wider">
                             <tr>
-                                {["Sr. No.", "Transaction ID", "Customer", "Amount", "Method", "Payment Status", "Date"].map((heading, i) => (
+                                {["Sr. No.", "Transaction ID", "Customer", "Products", "Amount", "Method", "Payment Status", "Date"].map((heading, i) => (
                                     <th key={i} className="px-4 py-3">{heading}</th>
                                 ))}
                             </tr>
@@ -52,6 +64,17 @@ export default function AdminTransactions() {
                                         <div className="flex flex-col">
                                             <span className="font-medium text-slate-700">{txn.customerName}</span>
                                             <span className="text-xs text-slate-400">{txn.customerEmail}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex flex-col gap-1">
+                                            {txn.orderItems.map((item, idx) => (
+                                                <div key={idx} className="flex items-center gap-2">
+                                                    <span className="text-xs text-slate-700 font-medium">
+                                                        • {item.product?.name} <span className="text-slate-500 font-normal">(x{item.quantity})</span>
+                                                    </span>
+                                                </div>
+                                            ))}
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 font-medium text-slate-800">₹{txn.total}</td>

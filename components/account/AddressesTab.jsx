@@ -1,21 +1,46 @@
 'use client';
 import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchAddressesAsync } from "@/lib/features/address/addressSlice";
+import { fetchAddressesAsync, deleteAddressAsync } from "@/lib/features/address/addressSlice";
 import { Plus, MapPin, Edit2, Trash2 } from "lucide-react";
 import AddressModal from "@/components/AddressModal";
 import Loading from "@/components/Loading";
+import { useSession } from "next-auth/react";
+import { toast } from "react-hot-toast";
 
 export default function AddressesTab() {
     const dispatch = useDispatch();
+    const { data: session } = useSession();
     const { list: addresses, status } = useSelector(state => state.address);
     const [showAddressModal, setShowAddressModal] = useState(false);
+    const [editingAddress, setEditingAddress] = useState(null);
 
     useEffect(() => {
-        if (status === 'idle') {
-            dispatch(fetchAddressesAsync());
+        if (status === 'idle' && session?.user?.id) {
+            dispatch(fetchAddressesAsync(session.user.id));
         }
-    }, [status, dispatch]);
+    }, [status, dispatch, session]);
+
+    const handleDelete = async (id) => {
+        if (window.confirm("Are you sure you want to delete this address?")) {
+            try {
+                await dispatch(deleteAddressAsync({ id, userId: session?.user?.id })).unwrap();
+                toast.success("Address deleted successfully");
+            } catch (error) {
+                toast.error(error || "Failed to delete address");
+            }
+        }
+    };
+
+    const handleEdit = (address) => {
+        setEditingAddress(address);
+        setShowAddressModal(true);
+    };
+
+    const handleCloseModal = () => {
+        setShowAddressModal(false);
+        setTimeout(() => setEditingAddress(null), 200); // Clear after animation
+    };
 
     if (status === 'loading') return <div className="py-20 flex justify-center"><Loading /></div>;
 
@@ -24,7 +49,7 @@ export default function AddressesTab() {
             <div className="flex justify-between flex-wrap gap-4 items-center mb-8 pb-4 border-b border-gray-100">
                 <h2 className="text-xl font-bold text-gray-900">Your addresses</h2>
                 <button
-                    onClick={() => setShowAddressModal(true)}
+                    onClick={() => { setEditingAddress(null); setShowAddressModal(true); }}
                     className="flex items-center gap-2 px-4 py-2 bg-[#D4A398] hover:bg-[#c29186] text-white rounded-lg text-sm font-medium transition-colors"
                 >
                     <Plus size={16} />
@@ -47,10 +72,10 @@ export default function AddressesTab() {
                             <div className="flex justify-between items-start mb-2">
                                 <h3 className="font-semibold text-gray-900">{address.name}</h3>
                                 <div className="flex gap-2">
-                                    <button className="text-gray-400 hover:text-[#D4A398] transition-colors">
+                                    <button onClick={() => handleEdit(address)} className="text-gray-400 hover:text-[#D4A398] transition-colors">
                                         <Edit2 size={16} />
                                     </button>
-                                    <button className="text-gray-400 hover:text-red-500 transition-colors">
+                                    <button onClick={() => handleDelete(address.id)} className="text-gray-400 hover:text-red-500 transition-colors">
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
@@ -71,7 +96,7 @@ export default function AddressesTab() {
                 </div>
             )}
 
-            {showAddressModal && <AddressModal setShowAddressModal={setShowAddressModal} />}
+            {showAddressModal && <AddressModal setShowAddressModal={handleCloseModal} initialData={editingAddress} />}
         </div>
     );
 }

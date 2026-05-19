@@ -172,6 +172,22 @@ router.get('/transactions', async (req, res) => {
                 }
             } catch (_) {}
 
+            let orderItems = [];
+            try {
+                orderItems = await db.collection('OrderItem').find({ orderId: txn._id.toString() }).toArray();
+
+                // Enrich each item with product info
+                orderItems = await Promise.all(orderItems.map(async (item) => {
+                    let product = null;
+                    try {
+                        if (item.productId && ObjectId.isValid(item.productId)) {
+                            product = await db.collection('Product').findOne({ _id: new ObjectId(item.productId) });
+                        }
+                    } catch (_) {}
+                    return { ...item, id: item._id.toString(), product };
+                }));
+            } catch (_) {}
+
             return {
                 id: txn._id.toString(),
                 customerName: address?.name || 'Customer',
@@ -179,7 +195,8 @@ router.get('/transactions', async (req, res) => {
                 total: txn.total,
                 paymentMethod: txn.paymentMethod,
                 isPaid: txn.isPaid,
-                createdAt: txn.createdAt
+                createdAt: txn.createdAt,
+                orderItems
             };
         }));
 

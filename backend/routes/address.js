@@ -61,4 +61,67 @@ router.post('/', async (req, res) => {
     }
 });
 
+// PUT /api/address/:id
+router.put('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId, name, email, street, city, state, zip, country, phone } = req.body;
+        
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
+
+        const db = await getDb();
+        const collection = db.collection('Address');
+
+        const updateData = {
+            name, email, street, city, state, zip, country, phone,
+            updatedAt: new Date()
+        };
+
+        const result = await collection.findOneAndUpdate(
+            { _id: new ObjectId(id), userId },
+            { $set: updateData },
+            { returnDocument: 'after' }
+        );
+
+        if (!result) {
+            return res.status(404).json({ success: false, message: 'Address not found or unauthorized' });
+        }
+
+        res.json({ success: true, message: 'Address updated', address: { ...result, id: result._id.toString() } });
+
+    } catch (error) {
+        console.error("BACKEND_ERROR [PUT /api/address]:", error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// DELETE /api/address/:id
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId } = req.body; // Usually sent in body or query
+
+        if (!userId) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
+
+        const db = await getDb();
+        const collection = db.collection('Address');
+
+        const result = await collection.deleteOne({ _id: new ObjectId(id), userId });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ success: false, message: 'Address not found or unauthorized' });
+        }
+
+        res.json({ success: true, message: 'Address deleted', id });
+
+    } catch (error) {
+        console.error("BACKEND_ERROR [DELETE /api/address]:", error);
+        res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
 export default router;

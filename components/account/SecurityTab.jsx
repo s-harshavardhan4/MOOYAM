@@ -367,7 +367,7 @@ export default function SecurityTab() {
                         </div>
                     )}
                     
-                    {((user?.hasPassword && !isForgotMode) || isOtpVerified) && (
+                    {((user?.hasPassword && !isForgotMode && currentPassword.length > 0) || isOtpVerified) && (
                         <>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>

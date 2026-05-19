@@ -21,8 +21,16 @@ router.get('/', async (req, res) => {
             .sort({ createdAt: -1 })
             .toArray();
 
-        // Enrich each order with its items + product info
+        // Enrich each order with its items + product info + address
         const enrichedOrders = await Promise.all(orders.map(async (order) => {
+            let address = null;
+            try {
+                if (order.addressId && ObjectId.isValid(order.addressId)) {
+                    address = await db.collection('Address').findOne({ _id: new ObjectId(order.addressId) });
+                    if (address) address = { ...address, id: address._id.toString() };
+                }
+            } catch (_) {}
+
             let orderItems = [];
             try {
                 orderItems = await db.collection('OrderItem')
@@ -41,7 +49,7 @@ router.get('/', async (req, res) => {
                 }));
             } catch (_) {}
 
-            return { ...order, id: order._id.toString(), orderItems };
+            return { ...order, id: order._id.toString(), orderItems, address };
         }));
 
         res.json({ success: true, orders: enrichedOrders });

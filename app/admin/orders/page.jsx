@@ -221,9 +221,9 @@ export default function AdminOrders() {
                                 <p><span className="text-green-700">Paid:</span> {selectedOrder.isPaid ? "Yes" : "No"}</p>
                                 <button 
                                     onClick={() => updateOrderPayment(selectedOrder.id, !selectedOrder.isPaid)}
-                                    className={`text-[10px] px-2 py-0.5 rounded transition-colors ${selectedOrder.isPaid ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'bg-green-100 text-green-600 hover:bg-green-200'}`}
+                                    className="text-[10px] px-2 py-1 rounded border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors shadow-sm"
                                 >
-                                    {selectedOrder.isPaid ? "Mark Unpaid" : "Mark Paid"}
+                                    {selectedOrder.isPaid ? "Change to Unpaid" : "Change to Paid"}
                                 </button>
                             </div>
                             {selectedOrder.isCouponUsed && (
