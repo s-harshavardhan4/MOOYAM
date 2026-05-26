@@ -1,8 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    images:{
+    images: {
         unoptimized: true
-    }
+    },
+    experimental: {
+        missingSuspenseWithCSRBailout: false,
+    },
+    output: 'standalone',
 };
 
 export default nextConfig;
