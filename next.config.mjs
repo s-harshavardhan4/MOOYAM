@@ -6,7 +6,9 @@ const nextConfig = {
     experimental: {
         missingSuspenseWithCSRBailout: false,
     },
-    output: 'standalone',
+    webpack: (config, { isServer }) => {
+        return config;
+    },
 };
 
 export default nextConfig;
