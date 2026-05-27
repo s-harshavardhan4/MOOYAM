@@ -1,4 +1,14 @@
-import { Outfit, Playfair_Display } from "next/font/google";
+import localFont from 'next/font/local'
+
+const outfit = {
+  variable: '--font-outfit',
+  style: { fontFamily: 'sans-serif' },
+}
+
+const playfair = {
+  variable: '--font-playfair',
+  style: { fontFamily: 'serif' },
+}
 import { Toaster } from "react-hot-toast";
 import StoreProvider from "@/app/StoreProvider";
 import AuthProvider from "@/app/AuthProvider";
